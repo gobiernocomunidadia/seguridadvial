@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Municipalidad de Lomas de Zamora</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Montserrat -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --lomas-blue: #004a99;
+            --lomas-cyan: #00a8e1;
+        }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #f9fafb;
+        }
+        .text-lomas-blue { color: var(--lomas-blue); }
+        
+        .btn-vial {
+            background-color: var(--lomas-blue);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 15px -3px rgba(0, 74, 153, 0.2);
+        }
+        .btn-vial:hover {
+            background-color: #003a7a;
+            transform: scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(0, 74, 153, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center">
+
+    <!-- Logo Institucional -->
+    <div class="mb-12 text-center">
+        <div class="flex flex-col items-center">
+            <!-- Icono Representativo de la Muni -->
+            <svg class="h-24 w-auto text-lomas-blue mb-4" viewBox="0 0 100 100" fill="currentColor">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" stroke-width="6"/>
+                <path d="M30 50 L70 50 M50 30 L50 70" stroke="currentColor" stroke-width="6"/>
+            </svg>
+            <span class="block text-xs font-bold text-gray-400 tracking-[0.3em] uppercase">Municipalidad de</span>
+            <h1 class="text-3xl font-extrabold text-lomas-blue tracking-tight">LOMAS DE ZAMORA</h1>
+        </div>
+    </div>
+
+    <!-- Botón de Acceso Directo -->
+    <a href="seguridad_vial.html" class="btn-vial text-white px-12 py-6 rounded-2xl flex flex-col items-center gap-3 w-full max-w-sm group text-center">
+        <div class="bg-white/20 p-3 rounded-full group-hover:rotate-12 transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+        </div>
+        <span class="text-2xl font-bold tracking-wider uppercase">Seguridad Vial</span>
+    </a>
+
+    <!-- Footer Mínimo -->
+    <footer class="mt-16 text-center text-gray-400 text-xs font-semibold tracking-widest uppercase">
+        Municipio de Lomas de Zamora
+    </footer>
+
+</body>
+</html>
