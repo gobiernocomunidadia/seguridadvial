@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Municipalidad de Lomas de Zamora</title>
+    <!-- Tailwind CSS para agilidad en diseño UX -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Montserrat (Tipografía oficial) -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --lomas-blue: #004a99;
+            --lomas-cyan: #00a8e1;
+        }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #f9fafb;
+        }
+        .bg-lomas-blue { background-color: var(--lomas-blue); }
+        .text-lomas-blue { color: var(--lomas-blue); }
+        .border-lomas-cyan { border-color: var(--lomas-cyan); }
+        
+        /* Animaciones de UX */
+        .page-fade {
+            transition: all 0.4s ease-in-out;
+        }
+        .hidden-page {
+            display: none;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        /* Botón estilo Lomas GEMS */
+        .btn-vial {
+            background-color: var(--lomas-blue);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 15px -3px rgba(0, 74, 153, 0.2);
+        }
+        .btn-vial:hover {
+            background-color: #003a7a;
+            transform: scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(0, 74, 153, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- SECCIÓN DE INICIO -->
+    <main id="page-home" class="flex-grow flex flex-col items-center justify-center px-6 page-fade">
+        <!-- Logo Institucional -->
+        <div class="mb-12">
+            <div class="flex flex-col items-center">
+                <svg class="h-24 w-auto text-lomas-blue" viewBox="0 0 100 100" fill="currentColor">
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" stroke-width="6"/>
+                    <path d="M30 50 L70 50 M50 30 L50 70" stroke="currentColor" stroke-width="6"/>
+                </svg>
+                <div class="mt-4 text-center">
+                    <span class="block text-xs font-bold text-gray-400 tracking-[0.3em] uppercase">Municipalidad de</span>
+                    <h1 class="text-3xl font-extrabold text-lomas-blue tracking-tight">LOMAS DE ZAMORA</h1>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botón Centralizado -->
+        <button onclick="navigateTo('vial')" class="btn-vial text-white px-12 py-6 rounded-2xl flex flex-col items-center gap-3 w-full max-w-sm group">
+            <div class="bg-white/20 p-3 rounded-full group-hover:rotate-12 transition-transform">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+            </div>
+            <span class="text-2xl font-bold tracking-wider">SEGURIDAD VIAL</span>
+        </button>
+        
+        <p class="mt-8 text-gray-400 text-sm font-medium italic">Gestión eficiente y transparente</p>
+    </main>
+
+    <!-- SECCIÓN DE SEGURIDAD VIAL -->
+    <section id="page-vial" class="hidden-page page-fade flex-grow">
+        <!-- Header de Página de Destino -->
+        <div class="bg-lomas-blue text-white py-10 px-6 border-b-8 border-lomas-cyan">
+            <div class="max-w-4xl mx-auto flex items-center justify-between">
+                <div>
+                    <h2 class="text-3xl font-bold italic">SEGURIDAD VIAL</h2>
+                    <p class="text-blue-100 opacity-80">Trámites, turnos y consultas.</p>
+                </div>
+                <button onclick="navigateTo('home')" class="bg-white/10 hover:bg-white/20 p-3 rounded-full transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Contenido Simplificado GEMS -->
+        <div class="max-w-4xl mx-auto p-8 grid gap-6">
+            <div class="bg-white p-6 rounded-xl border-l-8 border-lomas-cyan shadow-sm flex items-center justify-between cursor-pointer hover:bg-gray-50 transition">
+                <div>
+                    <h3 class="font-bold text-lg text-lomas-blue">Licencias de Conducir</h3>
+                    <p class="text-sm text-gray-500 italic">Sacá tu turno 100% online.</p>
+                </div>
+                <div class="text-lomas-cyan">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl border-l-8 border-lomas-cyan shadow-sm flex items-center justify-between cursor-pointer hover:bg-gray-50 transition">
+                <div>
+                    <h3 class="font-bold text-lg text-lomas-blue">Pago de Infracciones</h3>
+                    <p class="text-sm text-gray-500 italic">Consultá y aboná tus multas vigentes.</p>
+                </div>
+                <div class="text-lomas-cyan">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Institucional Mínimo -->
+    <footer class="py-8 bg-white border-t border-gray-100">
+        <div class="text-center text-gray-400 text-xs font-semibold tracking-widest uppercase">
+            Municipio de Lomas de Zamora
+        </div>
+    </footer>
+
+    <script>
+        function navigateTo(pageId) {
+            const home = document.getElementById('page-home');
+            const vial = document.getElementById('page-vial');
+            
+            if (pageId === 'vial') {
+                home.classList.add('hidden-page');
+                setTimeout(() => {
+                    home.style.display = 'none';
+                    vial.style.display = 'block';
+                    setTimeout(() => vial.classList.remove('hidden-page'), 50);
+                }, 400);
+            } else {
+                vial.classList.add('hidden-page');
+                setTimeout(() => {
+                    vial.style.display = 'none';
+                    home.style.display = 'flex';
+                    setTimeout(() => home.classList.remove('hidden-page'), 50);
+                }, 400);
+            }
+        }
+    </script>
+</body>
+</html>
