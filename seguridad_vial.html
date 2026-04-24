@@ -134,7 +134,7 @@
             
             <div class="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-6">
                 
-                <!-- SECCIÓN: FILTRO GLOBAL (NUEVO) -->
+                <!-- SECCIÓN: FILTRO GLOBAL -->
                 <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30 shadow-sm">
                     <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-2 flex items-center gap-2">
                         <i data-lucide="crosshair" class="h-4 w-4"></i> Filtro Global de Zona
@@ -471,7 +471,7 @@
                 };
             }
 
-            // Esta función ahora también filtra dinámicamente según el Filtro Global
+            // Esta función ahora también filtra dinámicamente según el Filtro Global (usando CGM estrictamente)
             function updatePointStyles() {
                 const zoom = map.getZoom();
                 let size = 10;   
@@ -484,7 +484,7 @@
                 // Función auxiliar para aplicar estilo y visibilidad a capas de puntos
                 const applyStyleWithFilter = (layer, color, path) => {
                     layer.setStyle((feature) => {
-                        const featCgm = feature.getProperty('CGM') || feature.getProperty('cgm');
+                        const featCgm = feature.getProperty('CGM');
                         let isVisible = true;
                         
                         if (globalCgm !== "TODOS") {
@@ -538,7 +538,7 @@
             // Ventanas Emergentes base
             function bindPopup(layer, colorTitle, defaultTitle, isPolygon) {
                 layer.addListener('click', function(event) {
-                    const name = event.feature.getProperty('Name') || event.feature.getProperty('nombre') || defaultTitle;
+                    const name = event.feature.getProperty('Name') || defaultTitle;
                     let content = `<div style="font-family: 'Montserrat', sans-serif; min-width: 180px; position: relative;">`;
                     content += `<button onclick="window.closeInfoWindow()" class="custom-close-btn">&times;</button>`;
                     
