@@ -427,20 +427,24 @@
 
         // Renderizado de la Tabla Top 10
         function updateTable(incidentesFiltrados) {
-            // Lista de términos "basura" a ignorar en el ranking
-            const terminosIgnorados = ['DS', 'S/D', 'S / D', 'SIN DATOS', 'DESCONOCIDO'];
+            // Lista de términos "basura" a ignorar en el ranking (Ampliada por prevención de errores de tipeo)
+            const terminosIgnorados = ['DS', 'D S', 'S/D', 'S / D', 'S /D', 'S/ D', 'SD', 'SIN DATOS', 'DESCONOCIDO'];
 
             // Contar incidentes agrupando por dirección (priorizamos columna normalizada)
             const conteoDirecciones = incidentesFiltrados.reduce((acc, curr) => {
-                let dir = curr.direccion_normalizada || curr['Calle y Altura'] || '';
-                dir = dir.trim();
+                let dirOriginal = curr.direccion_normalizada || curr['Calle y Altura'] || '';
+                
+                // Limpieza profunda: aplastamos espacios múltiples (ej: "D   S" pasa a ser "D S") y lo pasamos a mayúscula
+                let dirLimpia = dirOriginal.replace(/\s+/g, ' ').trim().toUpperCase();
 
-                // Si la dirección está vacía o está en la lista de ignorados, la saltamos
-                if (!dir || terminosIgnorados.includes(dir.toUpperCase())) {
+                // Si la dirección está vacía o su versión limpia está en la lista de ignorados, la saltamos
+                if (!dirLimpia || terminosIgnorados.includes(dirLimpia)) {
                     return acc;
                 }
 
-                acc[dir] = (acc[dir] || 0) + 1;
+                // Usamos la original trimeada para que se vea legible en pantalla
+                let dirFinal = dirOriginal.trim();
+                acc[dirFinal] = (acc[dirFinal] || 0) + 1;
                 return acc;
             }, {});
 
