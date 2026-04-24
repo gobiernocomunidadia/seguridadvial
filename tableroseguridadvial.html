@@ -11,6 +11,9 @@
     <!-- PapaParse para procesar CSV ágilmente -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <!-- Google Font: Montserrat -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 
@@ -141,10 +144,35 @@
 
         </section>
 
-        <!-- Contenedor para Escalabilidad Futura (Tablas / Mapas) -->
-        <section id="contenedor-graficos" class="bg-white rounded-xl p-6 shadow-lg mt-4 hidden">
-            <h3 class="text-lg font-bold text-institucional-petroleo mb-4 border-b pb-2">Detalle por zonas (Próximamente)</h3>
-            <!-- Aquí pueden inyectar Chart.js o una tabla de DataTables -->
+        <!-- Gráficos y Tablas -->
+        <section id="contenedor-graficos" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+            
+            <!-- Línea de Tiempo -->
+            <article class="bg-white rounded-xl p-6 shadow-lg flex flex-col">
+                <h3 class="text-lg font-bold text-institucional-petroleo mb-4 border-b border-gray-100 pb-2">Evolución de Incidentes</h3>
+                <div class="relative flex-grow h-64">
+                    <canvas id="timeline-chart"></canvas>
+                </div>
+            </article>
+
+            <!-- Tabla Top 10 Direcciones -->
+            <article class="bg-white rounded-xl p-6 shadow-lg flex flex-col">
+                <h3 class="text-lg font-bold text-institucional-petroleo mb-4 border-b border-gray-100 pb-2">Top 10 Direcciones con más incidentes</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 uppercase text-xs tracking-wider">
+                                <th class="p-3 rounded-tl-lg font-semibold">Dirección</th>
+                                <th class="p-3 rounded-tr-lg text-center font-semibold w-24">Incidentes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="top-direcciones-body" class="text-sm text-gray-700">
+                            <!-- Se inyecta dinámicamente vía JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+
         </section>
 
     </main>
@@ -172,8 +200,11 @@
             kpiReductores: document.getElementById('kpi-reductores'),
             lastUpdate: document.getElementById('last-update'),
             errorBanner: document.getElementById('error-banner'),
-            errorMessage: document.getElementById('error-message')
+            errorMessage: document.getElementById('error-message'),
+            tablaBody: document.getElementById('top-direcciones-body') // Nuevo ref a tabla
         };
+
+        let chartInstance = null; // Guardar la instancia de Chart.js para destruirla/redibujarla
 
         // Utilidad: Normaliza texto para matchear "Banfield Este" con "BANFIELD ESTE" sin problemas de tildes
         const normalizeString = (str) => {
@@ -320,6 +351,114 @@
             animateValue(DOM.kpiIncidentes, incidentes.length);
             animateValue(DOM.kpiSemaforos, semaforos.length);
             animateValue(DOM.kpiReductores, reductores.length);
+
+            // Actualizamos la vista de la línea de tiempo y la tabla top 10
+            updateChart(incidentes);
+            updateTable(incidentes);
+        }
+
+        // Renderizado del Gráfico (Timeline)
+        function updateChart(incidentesFiltrados) {
+            const ctx = document.getElementById('timeline-chart').getContext('2d');
+            
+            // Agrupar cantidades por Periodo
+            const conteoPorPeriodo = incidentesFiltrados.reduce((acc, curr) => {
+                const periodo = (curr.Periodo && curr.Periodo !== 'DESCONOCIDO') ? curr.Periodo : 'Sin Fecha';
+                if(periodo !== 'Sin Fecha') {
+                    acc[periodo] = (acc[periodo] || 0) + 1;
+                }
+                return acc;
+            }, {});
+
+            // Ordenar las etiquetas cronológicamente (MM/YYYY) ascendente para la curva
+            const labels = Object.keys(conteoPorPeriodo).sort((a, b) => {
+                const [mA, yA] = a.split('/');
+                const [mB, yB] = b.split('/');
+                return new Date(yA, mA - 1) - new Date(yB, mB - 1);
+            });
+
+            const data = labels.map(label => conteoPorPeriodo[label]);
+
+            // Evitamos la sobreposición de gráficos en canvas
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Cant. de Incidentes',
+                        data: data,
+                        borderColor: '#DF4172', // Fucsia institucional
+                        backgroundColor: 'rgba(223, 65, 114, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#1E6F99', // Petroleo
+                        pointBorderColor: '#ffffff',
+                        pointHoverBackgroundColor: '#ffffff',
+                        pointHoverBorderColor: '#1E6F99',
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.3 // Curva suave
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { precision: 0, color: '#6b7280' },
+                            grid: { color: '#f3f4f6' }
+                        },
+                        x: { 
+                            ticks: { color: '#6b7280' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Renderizado de la Tabla Top 10
+        function updateTable(incidentesFiltrados) {
+            // Contar incidentes agrupando por dirección (priorizamos columna normalizada)
+            const conteoDirecciones = incidentesFiltrados.reduce((acc, curr) => {
+                const dir = curr.direccion_normalizada || curr['Calle y Altura'] || 'Dirección no especificada';
+                acc[dir] = (acc[dir] || 0) + 1;
+                return acc;
+            }, {});
+
+            // Ordenar de mayor a menor y truncar a los 10 primeros
+            const top10 = Object.entries(conteoDirecciones)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            DOM.tablaBody.innerHTML = '';
+
+            if (top10.length === 0) {
+                DOM.tablaBody.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-gray-500 italic">No hay datos registrados en este periodo/zona</td></tr>';
+                return;
+            }
+
+            top10.forEach(([direccion, cantidad], index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-100 hover:bg-gray-50 transition-colors';
+                
+                // Resaltar visualmente las primeras 3 posiciones
+                const rankStyle = index < 3 ? 'font-bold text-institucional-fucsia' : 'text-gray-600';
+                
+                tr.innerHTML = `
+                    <td class="p-3 ${rankStyle}">${direccion}</td>
+                    <td class="p-3 text-center font-semibold text-institucional-petroleo bg-gray-50/50">${cantidad}</td>
+                `;
+                DOM.tablaBody.appendChild(tr);
+            });
         }
 
         // Animación suave de los números
