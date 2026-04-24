@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agencia de Seguridad Vial - Lomas de Zamora</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --bg-main: #19567C;
+            --blanco: #FFFFFF;
+            --acento: #4AB5E0;
+            --magenta: #D34872;
+            --azul-inst: #19567C;
+        }
+
+        body { font-family: 'Montserrat', sans-serif; background-color: var(--bg-main); color: var(--blanco); margin: 0; min-height: 100vh; }
+        #map { height: 100%; width: 100%; border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #F3F6F9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E6EDF3; border-radius: 4px; }
+    </style>
+</head>
+<body class="flex flex-col">
+
+    <header class="bg-[var(--bg-main)] shadow-lg border-b-4 border-[var(--acento)] z-20 py-6 px-4 shrink-0">
+        <div class="max-w-[1600px] mx-auto flex items-center justify-center gap-4">
+            <div class="bg-white text-[var(--bg-main)] rounded-full h-14 w-14 flex items-center justify-center shadow-md">
+                <i class="fa-solid fa-car text-2xl"></i>
+            </div>
+            <div class="flex flex-col">
+                <h1 class="text-3xl font-extrabold tracking-tight uppercase leading-none">Agencia de Seguridad Vial</h1>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-[1600px] mx-auto py-8 px-4 flex-1 flex flex-col lg:flex-row gap-6">
+        
+        <aside class="w-full lg:w-80 bg-white rounded-xl shadow-md border border-[#E6EDF3] flex flex-col max-h-[calc(100vh-200px)] overflow-hidden">
+            <div class="p-4 border-b bg-[#F3F6F9] flex items-center gap-2">
+                <i data-lucide="filter" class="text-[#0B5F8D] h-5 w-5"></i>
+                <h3 class="font-bold text-[#0F172A] uppercase text-sm">Filtros Operativos</h3>
+            </div>
+            
+            <div class="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+                
+                <!-- SECCIÓN: DIVISIÓN TERRITORIAL -->
+                <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
+                    <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-3 flex items-center gap-2">
+                        <i data-lucide="map" class="h-4 w-4"></i> División Territorial
+                    </h4>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-limite" checked class="w-4 h-4 accent-[#19567C]">
+                            <span class="text-sm text-[#0F172A] font-bold">Límite Lomas de Zamora</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-cgm" checked class="w-4 h-4 accent-[#19567C]">
+                            <span class="text-sm text-[#0F172A] font-bold">División por CGM</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN: INFRAESTRUCTURA VIAL -->
+                <div class="bg-[#D34872]/10 p-3 rounded-lg border border-[#D34872]/30">
+                    <h4 class="text-xs font-extrabold text-[#D34872] uppercase mb-3 flex items-center gap-2">
+                        <i data-lucide="cone" class="h-4 w-4"></i> Infraestructura Vial
+                    </h4>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-semaforos" class="w-4 h-4 accent-[#D34872]">
+                            <span class="text-sm text-[#0F172A] font-bold">Semáforos Activos</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-reductores" class="w-4 h-4 accent-[#D34872]">
+                            <span class="text-sm text-[#0F172A] font-bold">Reductores de Velocidad</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-solicitudes" class="w-4 h-4 accent-[#D34872]">
+                            <span class="text-sm text-[#0F172A] font-bold">Solicitudes Semáforos 2026</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN: TRÁFICO -->
+                <div class="bg-[#4AB5E0]/10 p-3 rounded-lg border border-[#4AB5E0]/30">
+                    <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-3 flex items-center gap-2">
+                        <i data-lucide="activity" class="h-4 w-4"></i> Tráfico
+                    </h4>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="cb-trafico" class="w-4 h-4 accent-[#4AB5E0]">
+                        <span class="text-sm text-[#0F172A] font-bold">Ver Tráfico Real</span>
+                    </label>
+                </div>
+
+            </div>
+        </aside>
+
+        <div class="flex-1 bg-white p-2 rounded-xl shadow-lg border border-[#E6EDF3] flex flex-col min-h-[500px]">
+            <div id="map"></div>
+        </div>
+
+    </main>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2MHti5Cy4IDKPc3Iu0ypNQg_BgsjcMoQ&callback=initMap" defer></script>
+
+    <script>
+        let map, trafficLayer, infoWindow;
+        let limiteLayer, cgmLayer;
+        let semaforosLayer, reductoresLayer, solicitudesLayer;
+
+        function initMap() {
+            lucide.createIcons();
+            infoWindow = new google.maps.InfoWindow();
+            
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: -34.7573, lng: -58.4035 },
+                zoom: 13,
+                styles: [{ "featureType": "poi", "stylers": [{ "visibility": "off" }] }]
+            });
+
+            // 1. CAPA: Límite Distrital
+            limiteLayer = new google.maps.Data();
+            limiteLayer.loadGeoJson('./municipios_Lomas de Zamora.geojson'); 
+            limiteLayer.setStyle({
+                fillColor: '#19567C',
+                fillOpacity: 0.02,
+                strokeColor: '#19567C',
+                strokeWeight: 4,
+                strokeOpacity: 0.9,
+                zIndex: 2
+            });
+            limiteLayer.setMap(map);
+
+            // 2. CAPA: División por CGM
+            cgmLayer = new google.maps.Data();
+            cgmLayer.loadGeoJson('./CGM.geojson');
+            cgmLayer.setStyle({
+                fillColor: '#4AB5E0',
+                fillOpacity: 0.25,
+                strokeColor: '#FFFFFF',
+                strokeWeight: 1.5,
+                strokeOpacity: 0.9,
+                zIndex: 1
+            });
+            cgmLayer.setMap(map);
+
+            // Evento Click para CGM
+            cgmLayer.addListener('click', function(event) {
+                const cgm = event.feature.getProperty('CGM');
+                const manzanas = event.feature.getProperty('Manzanas');
+                const cuadras = event.feature.getProperty('Cuadras');
+                const viviendas = event.feature.getProperty('Viviendas');
+
+                if (cgm) {
+                    const content = `
+                        <div style="font-family: 'Montserrat', sans-serif; padding: 4px; min-width: 180px;">
+                            <h3 style="font-weight: 800; color: #19567C; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">CGM: ${cgm}</h3>
+                            <p style="margin: 4px 0; font-size: 13px; color: #333;"><b>Manzanas:</b> ${manzanas}</p>
+                            <p style="margin: 4px 0; font-size: 13px; color: #333;"><b>Cuadras:</b> ${cuadras}</p>
+                            <p style="margin: 4px 0; font-size: 13px; color: #333;"><b>Viviendas:</b> ${viviendas}</p>
+                        </div>
+                    `;
+                    infoWindow.setContent(content);
+                    infoWindow.setPosition(event.latLng);
+                    infoWindow.open(map);
+                }
+            });
+
+            // 3. CAPA: Semáforos Activos
+            semaforosLayer = new google.maps.Data();
+            semaforosLayer.loadGeoJson('./Semaforos Activos.geojson');
+            semaforosLayer.setStyle({
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 6,
+                    fillColor: '#19567C', // Azul Institucional
+                    fillOpacity: 0.9,
+                    strokeColor: '#FFFFFF',
+                    strokeWeight: 1.5
+                },
+                zIndex: 10
+            });
+
+            // 4. CAPA: Reductores de Velocidad
+            reductoresLayer = new google.maps.Data();
+            reductoresLayer.loadGeoJson('./Reductores de Velocidad.geojson');
+            reductoresLayer.setStyle({
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 6,
+                    fillColor: '#D34872', // Magenta
+                    fillOpacity: 0.9,
+                    strokeColor: '#FFFFFF',
+                    strokeWeight: 1.5
+                },
+                zIndex: 10
+            });
+
+            // 5. CAPA: Solicitudes Semáforos 2026
+            solicitudesLayer = new google.maps.Data();
+            solicitudesLayer.loadGeoJson('./Solicitudes Semaforos 2026.geojson');
+            solicitudesLayer.setStyle({
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 6,
+                    fillColor: '#4AB5E0', // Celeste Acento
+                    fillOpacity: 0.9,
+                    strokeColor: '#FFFFFF',
+                    strokeWeight: 1.5
+                },
+                zIndex: 10
+            });
+
+            // Función genérica para mostrar popups en las capas de puntos
+            function bindPointPopup(layer, titleColor, defaultTitle) {
+                layer.addListener('click', function(event) {
+                    const name = event.feature.getProperty('Name') || defaultTitle;
+                    const desc = event.feature.getProperty('description');
+                    const cgm = event.feature.getProperty('CGM');
+                    const nombre = event.feature.getProperty('nombre'); // A veces usan "nombre" en vez de "Name"
+                    
+                    const finalName = name !== defaultTitle ? name : (nombre || defaultTitle);
+
+                    let content = `<div style="font-family: 'Montserrat', sans-serif; padding: 4px; min-width: 180px;">
+                        <h3 style="font-weight: 800; color: ${titleColor}; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">${finalName}</h3>`;
+                    
+                    if (desc) content += `<p style="margin: 4px 0; font-size: 13px; color: #333;"><b>Detalle:</b> ${desc}</p>`;
+                    if (cgm) content += `<p style="margin: 4px 0; font-size: 13px; color: #333;"><b>CGM:</b> ${cgm}</p>`;
+                    
+                    content += `</div>`;
+                    infoWindow.setContent(content);
+                    infoWindow.setPosition(event.latLng);
+                    infoWindow.open(map);
+                });
+            }
+
+            // Aplicamos los popups a las nuevas capas
+            bindPointPopup(semaforosLayer, '#19567C', 'Semáforo');
+            bindPointPopup(reductoresLayer, '#D34872', 'Reductor de Velocidad');
+            bindPointPopup(solicitudesLayer, '#4AB5E0', 'Solicitud 2026');
+
+            // 6. CAPA: Tráfico
+            trafficLayer = new google.maps.TrafficLayer();
+
+            // --- Lógica de Checkboxes ---
+            document.getElementById('cb-limite').addEventListener('change', (e) => {
+                e.target.checked ? limiteLayer.setMap(map) : limiteLayer.setMap(null);
+            });
+
+            document.getElementById('cb-cgm').addEventListener('change', (e) => {
+                e.target.checked ? cgmLayer.setMap(map) : cgmLayer.setMap(null);
+            });
+
+            document.getElementById('cb-semaforos').addEventListener('change', (e) => {
+                e.target.checked ? semaforosLayer.setMap(map) : semaforosLayer.setMap(null);
+            });
+
+            document.getElementById('cb-reductores').addEventListener('change', (e) => {
+                e.target.checked ? reductoresLayer.setMap(map) : reductoresLayer.setMap(null);
+            });
+
+            document.getElementById('cb-solicitudes').addEventListener('change', (e) => {
+                e.target.checked ? solicitudesLayer.setMap(map) : solicitudesLayer.setMap(null);
+            });
+
+            document.getElementById('cb-trafico').addEventListener('change', (e) => {
+                e.target.checked ? trafficLayer.setMap(map) : trafficLayer.setMap(null);
+            });
+        }
+    </script>
+</body>
+</html>
