@@ -8,6 +8,9 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- PapaParse para leer CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
     <!-- Fuentes e Íconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -30,14 +33,45 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #F3F6F9; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #E6EDF3; border-radius: 4px; }
 
-        /* Ajustes para la ventana de Info de Google Maps para que parezca Leaflet */
+        /* Ajustes para la ventana de Info de Google Maps */
         .gm-style-iw.gm-style-iw-c {
             border-radius: 8px !important;
             padding: 12px !important;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
         }
         .gm-style-iw-d { overflow: hidden !important; }
-        button.gm-ui-hover-effect { display: none !important; /* Ocultar la cruz por defecto fea de google */ }
+        button.gm-ui-hover-effect { display: none !important; }
+
+        /* Estilos para Clústeres de Incidentes y Efecto Latir */
+        .incident-cluster {
+            background-color: var(--magenta);
+            color: white;
+            border: 2px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 11px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
+            transition: transform 0.2s;
+        }
+        .incident-cluster:hover {
+            transform: scale(1.1);
+            z-index: 999 !important;
+        }
+        .pulse-cluster {
+            background-color: #E11D48; /* Un magenta más vibrante para la alerta */
+            animation: pulse-animation 1.5s infinite;
+        }
+        @keyframes pulse-animation {
+            0% { box-shadow: 0 0 0 0 rgba(211, 72, 114, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(211, 72, 114, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(211, 72, 114, 0); }
+        }
     </style>
 </head>
 <body class="flex flex-col">
@@ -80,6 +114,26 @@
                     </div>
                 </div>
 
+                <!-- SECCIÓN: INCIDENTES (NUEVA) -->
+                <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
+                    <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-3 flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="h-4 w-4"></i> Incidentes
+                    </h4>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-incidentes" class="w-4 h-4 accent-[#19567C]">
+                            <span class="text-sm text-[#0F172A] font-bold">Mapa de Incidentes</span>
+                        </label>
+                        <div class="flex flex-col gap-1 mt-2 pl-7">
+                            <label class="text-xs font-semibold text-gray-600">Filtrar por Mes/Año:</label>
+                            <select id="select-mes-ano" class="w-full text-xs p-1.5 border border-gray-300 rounded focus:outline-none focus:border-[#19567C]">
+                                <option value="TODOS">Todos los meses</option>
+                                <!-- Se llena dinámicamente con JS -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- SECCIÓN: INFRAESTRUCTURA VIAL -->
                 <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
                     <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-3 flex items-center gap-2">
@@ -102,12 +156,12 @@
                 </div>
 
                 <!-- SECCIÓN: TRÁFICO -->
-                <div class="bg-[#4AB5E0]/10 p-3 rounded-lg border border-[#4AB5E0]/30">
+                <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
                     <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-3 flex items-center gap-2">
                         <i data-lucide="activity" class="h-4 w-4"></i> Tráfico
                     </h4>
                     <label class="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" id="cb-trafico" class="w-4 h-4 accent-[#4AB5E0]">
+                        <input type="checkbox" id="cb-trafico" class="w-4 h-4 accent-[#19567C]">
                         <span class="text-sm text-[#0F172A] font-bold">Ver Tráfico Real</span>
                     </label>
                 </div>
@@ -126,12 +180,17 @@
     <script>
         let map, trafficLayer, infoWindow;
         let limiteLayer, cgmLayer, semaforosLayer, reductoresLayer, solicitudesLayer;
+        
+        // Variables para Incidentes
+        let incidentDataTotal = [];
+        let clusterOverlays = [];
+        let IncidentClusterOverlay; // Clase que se define al iniciar el mapa
 
         function initMap() {
             lucide.createIcons();
             infoWindow = new google.maps.InfoWindow();
             
-            // Estilo claro minimalista simulando Leaflet CartoDB
+            // Estilo claro minimalista
             const mapStyle = [
                 { featureType: "poi", stylers: [{ visibility: "off" }] },
                 { featureType: "transit", stylers: [{ visibility: "off" }] },
@@ -151,51 +210,87 @@
                 streetViewControl: false
             });
 
-            // 1. CAPA: Límite Distrital
+            // -----------------------------------------------------
+            // DEFINIR CLASE PARA EL CLÚSTER CON EFECTO CSS (PULSO)
+            // -----------------------------------------------------
+            IncidentClusterOverlay = class extends google.maps.OverlayView {
+                constructor(position, count, address, mapInstance) {
+                    super();
+                    this.position = position;
+                    this.count = count;
+                    this.address = address;
+                    this.div = null;
+                    this.setMap(mapInstance);
+                }
+                onAdd() {
+                    this.div = document.createElement('div');
+                    this.div.className = 'incident-cluster';
+                    
+                    // Si hay más de 5, generamos el efecto latir
+                    if (this.count > 5) {
+                        this.div.classList.add('pulse-cluster');
+                    }
+                    this.div.innerHTML = this.count;
+                    this.div.style.position = 'absolute';
+                    
+                    this.div.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const criticoHtml = this.count > 5 ? `<p style="margin: 4px 0; font-size: 12px; color: #D34872; font-weight: bold;"><i class="fa-solid fa-triangle-exclamation"></i> ¡Punto Crítico!</p>` : '';
+                        const content = `
+                            <div style="font-family: 'Montserrat', sans-serif; min-width: 180px;">
+                                <h3 style="font-weight: 800; font-size: 14px; color: #D34872; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">Zona de Incidentes</h3>
+                                <p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Dirección:</b> ${this.address}</p>
+                                <p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Total Registrados:</b> ${this.count}</p>
+                                ${criticoHtml}
+                            </div>
+                        `;
+                        infoWindow.setContent(content);
+                        infoWindow.setPosition(this.position);
+                        infoWindow.open(this.getMap());
+                    });
+
+                    const panes = this.getPanes();
+                    panes.overlayMouseTarget.appendChild(this.div);
+                }
+                draw() {
+                    if (!this.div) return;
+                    const overlayProjection = this.getProjection();
+                    const pos = overlayProjection.fromLatLngToDivPixel(this.position);
+                    // Centrar el div (mitad de 28px de ancho/alto)
+                    this.div.style.left = (pos.x - 14) + 'px';
+                    this.div.style.top = (pos.y - 14) + 'px';
+                }
+                onRemove() {
+                    if (this.div) {
+                        this.div.parentNode.removeChild(this.div);
+                        this.div = null;
+                    }
+                }
+            };
+
+            // -----------------------------------------------------
+            // CARGA DE CAPAS GEOJSON BASE
+            // -----------------------------------------------------
             limiteLayer = new google.maps.Data();
             limiteLayer.loadGeoJson('./municipios_Lomas de Zamora.geojson'); 
-            limiteLayer.setStyle({
-                fillColor: '#19567C',
-                fillOpacity: 0.02,
-                strokeColor: '#19567C',
-                strokeWeight: 4,
-                strokeOpacity: 0.8,
-                zIndex: 2
-            });
+            limiteLayer.setStyle({ fillColor: '#19567C', fillOpacity: 0.02, strokeColor: '#19567C', strokeWeight: 4, strokeOpacity: 0.8, zIndex: 2 });
             limiteLayer.setMap(map);
 
-            // 2. CAPA: División por CGM
             cgmLayer = new google.maps.Data();
             cgmLayer.loadGeoJson('./CGM.geojson');
-            cgmLayer.setStyle({
-                fillColor: '#4AB5E0',
-                fillOpacity: 0.25,
-                strokeColor: '#FFFFFF',
-                strokeWeight: 1.5,
-                strokeOpacity: 1,
-                zIndex: 1
-            });
+            cgmLayer.setStyle({ fillColor: '#4AB5E0', fillOpacity: 0.25, strokeColor: '#FFFFFF', strokeWeight: 1.5, strokeOpacity: 1, zIndex: 1 });
             cgmLayer.setMap(map);
 
-            // 3, 4, 5. CAPAS DE PUNTOS
-            semaforosLayer = new google.maps.Data();
-            semaforosLayer.loadGeoJson('./Semaforos Activos.geojson');
-            
-            reductoresLayer = new google.maps.Data();
-            reductoresLayer.loadGeoJson('./Reductores de Velocidad.geojson');
-            
-            solicitudesLayer = new google.maps.Data();
-            solicitudesLayer.loadGeoJson('./Solicitudes Semaforos 2026.geojson');
+            semaforosLayer = new google.maps.Data(); semaforosLayer.loadGeoJson('./Semaforos Activos.geojson');
+            reductoresLayer = new google.maps.Data(); reductoresLayer.loadGeoJson('./Reductores de Velocidad.geojson');
+            solicitudesLayer = new google.maps.Data(); solicitudesLayer.loadGeoJson('./Solicitudes Semaforos 2026.geojson');
 
-            // --- LÓGICA DE ESTILOS DINÁMICOS CON SVG ---
-            // Rutas vectoriales (similares a Lucide/FontAwesome) para cada categoría
+            // SVG Dinámicos
             const pathSemaforo = '<rect x="7" y="2" width="10" height="20" rx="3"/><circle cx="12" cy="7" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="17" r="1.5"/>';
             const pathReductor = '<path d="m20.9 18.55-8-15.98a1 1 0 0 0-1.8 0l-8 15.98"/><path d="M4.34 10a11.24 11.24 0 0 1 15.32 0"/><path d="M8.64 14.5a5.42 5.42 0 0 1 6.72 0"/><path d="M2 22h20"/>';
             const pathSolicitud = '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15h6"/>';
 
-            // Función para renderizar el círculo con el ícono adentro
             function getSvgIcon(color, iconPath, size) {
-                // Generamos un SVG con el círculo de fondo institucional y el ícono blanco en el centro
                 const svg = `
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="${size}" height="${size}">
                         <circle cx="16" cy="16" r="15" fill="${color}" stroke="#FFFFFF" stroke-width="2"/>
@@ -207,13 +302,12 @@
                 return {
                     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
                     scaledSize: new google.maps.Size(size, size),
-                    anchor: new google.maps.Point(size/2, size/2) // Centra exactamente el ícono en la coordenada
+                    anchor: new google.maps.Point(size/2, size/2)
                 };
             }
 
             function updatePointStyles() {
                 const zoom = map.getZoom();
-                // Tamaños dinámicos del ícono según nivel de zoom en píxeles
                 let size = 14;   
                 if (zoom >= 15) { size = 28; }       
                 else if (zoom >= 13) { size = 20; } 
@@ -223,37 +317,27 @@
                 solicitudesLayer.setStyle({ icon: getSvgIcon('#4AB5E0', pathSolicitud, size), zIndex: 10 });
             }
 
-            // Escuchar cambios en el zoom para redimensionar los puntos
             map.addListener('zoom_changed', updatePointStyles);
-            updatePointStyles(); // Aplicar estilo inicial
+            updatePointStyles();
 
-            // --- LÓGICA DE VENTANAS EMERGENTES (POPUPS) ---
+            // Ventanas Emergentes base
             function bindPopup(layer, colorTitle, defaultTitle, isPolygon) {
                 layer.addListener('click', function(event) {
-                    const p = event.feature.getProperty;
                     const name = event.feature.getProperty('Name') || event.feature.getProperty('nombre') || defaultTitle;
-                    
                     let content = `<div style="font-family: 'Montserrat', sans-serif; min-width: 180px;">`;
                     
                     if (isPolygon) {
-                        const cgm = event.feature.getProperty('CGM');
-                        content += `<h3 style="font-weight: 800; font-size: 14px; color: ${colorTitle}; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">CGM: ${cgm}</h3>`;
+                        content += `<h3 style="font-weight: 800; font-size: 14px; color: ${colorTitle}; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">CGM: ${event.feature.getProperty('CGM')}</h3>`;
                         content += `<p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Manzanas:</b> ${event.feature.getProperty('Manzanas') || '-'}</p>`;
                         content += `<p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Cuadras:</b> ${event.feature.getProperty('Cuadras') || '-'}</p>`;
                         content += `<p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Viviendas:</b> ${event.feature.getProperty('Viviendas') || '-'}</p>`;
                     } else {
                         content += `<h3 style="font-weight: 800; font-size: 14px; color: ${colorTitle}; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">${name}</h3>`;
-                        if (event.feature.getProperty('description')) {
-                            content += `<p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Detalle:</b> ${event.feature.getProperty('description')}</p>`;
-                        }
-                        if (event.feature.getProperty('CGM')) {
-                            content += `<p style="margin: 4px 0; font-size: 12px; color: #333;"><b>CGM:</b> ${event.feature.getProperty('CGM')}</p>`;
-                        }
+                        if (event.feature.getProperty('description')) content += `<p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Detalle:</b> ${event.feature.getProperty('description')}</p>`;
+                        if (event.feature.getProperty('CGM')) content += `<p style="margin: 4px 0; font-size: 12px; color: #333;"><b>CGM:</b> ${event.feature.getProperty('CGM')}</p>`;
                     }
                     content += `</div>`;
-
                     infoWindow.setContent(content);
-                    // Para polígonos, centrar el popup en el clic. Para puntos, centrar en la coordenada del punto.
                     infoWindow.setPosition(isPolygon ? event.latLng : event.feature.getGeometry().get());
                     infoWindow.open(map);
                 });
@@ -264,10 +348,115 @@
             bindPopup(reductoresLayer, '#D34872', 'Reductor de Velocidad', false);
             bindPopup(solicitudesLayer, '#4AB5E0', 'Solicitud 2026', false);
 
-            // 6. CAPA: Tráfico
             trafficLayer = new google.maps.TrafficLayer();
 
-            // --- LÓGICA DE CHECKBOXES ---
+            // -----------------------------------------------------
+            // LÓGICA DE INCIDENTES (CSV, CLUSTER, HAVERSINE)
+            // -----------------------------------------------------
+
+            // Fórmula de Haversine para distancias (Metros)
+            function getDistanceMeters(lat1, lon1, lat2, lon2) {
+                const R = 6371e3;
+                const φ1 = lat1 * Math.PI/180;
+                const φ2 = lat2 * Math.PI/180;
+                const Δφ = (lat2-lat1) * Math.PI/180;
+                const Δλ = (lon2-lon1) * Math.PI/180;
+                const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c; 
+            }
+
+            function limpiarClusters() {
+                clusterOverlays.forEach(overlay => overlay.setMap(null));
+                clusterOverlays = [];
+            }
+
+            function procesarYMostrarIncidentes() {
+                limpiarClusters();
+                
+                if (!document.getElementById('cb-incidentes').checked) return;
+
+                const mesFiltro = document.getElementById('select-mes-ano').value;
+                let dataFiltrada = incidentDataTotal;
+                
+                if (mesFiltro !== "TODOS") {
+                    dataFiltrada = incidentDataTotal.filter(d => d['Mes/Año'] === mesFiltro);
+                }
+
+                let clusters = [];
+
+                // Agrupación por 30 metros
+                dataFiltrada.forEach(row => {
+                    const lat = parseFloat(row.Latitud);
+                    const lng = parseFloat(row.Longitud);
+                    if (isNaN(lat) || isNaN(lng)) return;
+
+                    let foundCluster = null;
+                    for (let c of clusters) {
+                        if (getDistanceMeters(lat, lng, c.lat, c.lng) <= 30) {
+                            foundCluster = c;
+                            break;
+                        }
+                    }
+
+                    if (foundCluster) {
+                        foundCluster.count++;
+                    } else {
+                        clusters.push({
+                            lat: lat,
+                            lng: lng,
+                            count: 1,
+                            direccion: row.direccion_normalizada || row['Calle y Altura'] || 'Ubicación Desconocida'
+                        });
+                    }
+                });
+
+                // Dibujar overlays
+                clusters.forEach(c => {
+                    const overlay = new IncidentClusterOverlay(
+                        new google.maps.LatLng(c.lat, c.lng), 
+                        c.count, 
+                        c.direccion, 
+                        map
+                    );
+                    clusterOverlays.push(overlay);
+                });
+            }
+
+            // Cargar CSV usando PapaParse
+            fetch('./seguridad_vial.csv')
+                .then(response => response.text())
+                .then(csvText => {
+                    Papa.parse(csvText, {
+                        header: true,
+                        delimiter: ";", // Ajustado según tu archivo
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            incidentDataTotal = results.data;
+                            
+                            // Extraer Meses/Años únicos
+                            const mesesSet = new Set();
+                            incidentDataTotal.forEach(r => {
+                                if (r['Mes/Año']) mesesSet.add(r['Mes/Año']);
+                            });
+                            
+                            const selectMesAno = document.getElementById('select-mes-ano');
+                            Array.from(mesesSet).sort().forEach(mes => {
+                                const option = document.createElement('option');
+                                option.value = mes;
+                                option.textContent = mes;
+                                selectMesAno.appendChild(option);
+                            });
+
+                            // Eventos de filtro
+                            selectMesAno.addEventListener('change', procesarYMostrarIncidentes);
+                        }
+                    });
+                })
+                .catch(e => console.log("Error cargando CSV:", e));
+
+
+            // --- CHECKBOXES TOGGLES ---
             const toggleLayer = (id, layerInstance) => {
                 document.getElementById(id).addEventListener('change', (e) => {
                     e.target.checked ? layerInstance.setMap(map) : layerInstance.setMap(null);
@@ -280,6 +469,9 @@
             toggleLayer('cb-reductores', reductoresLayer);
             toggleLayer('cb-solicitudes', solicitudesLayer);
             toggleLayer('cb-trafico', trafficLayer);
+            
+            // Toggle Incidentes especial
+            document.getElementById('cb-incidentes').addEventListener('change', procesarYMostrarIncidentes);
         }
     </script>
 </body>
