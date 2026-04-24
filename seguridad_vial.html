@@ -203,6 +203,28 @@
                     </div>
                 </div>
 
+                <!-- SECCIÓN: RECORRIDOS LINEAS COLECTIVOS -->
+                <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
+                    <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-1 flex items-center gap-2">
+                        <i data-lucide="bus" class="h-4 w-4"></i> Recorridos Colectivos
+                    </h4>
+                    <h5 class="text-[10px] font-bold text-gray-500 uppercase mb-3 pl-6">Líneas Municipales</h5>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-yitos" class="w-4 h-4 accent-[#19567C]">
+                            <span class="text-sm text-[#0F172A] font-bold">Empresa Yitos</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-evg" class="w-4 h-4 accent-[#19567C]">
+                            <span class="text-sm text-[#0F172A] font-bold">Empresa EVG</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-autobuses" class="w-4 h-4 accent-[#19567C]">
+                            <span class="text-sm text-[#0F172A] font-bold">Empresa Autobuses</span>
+                        </label>
+                    </div>
+                </div>
+
                 <!-- SECCIÓN: TRÁFICO -->
                 <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
                     <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-3 flex items-center gap-2">
@@ -229,6 +251,7 @@
         let map, trafficLayer, infoWindow;
         let infoWindowTimer; // Temporizador global para el cierre automático
         let cgmLayer, semaforosLayer, reductoresLayer, solicitudesLayer;
+        let yitosLayer, evgLayer, autobusesLayer; // Capas de colectivos
         let limiteElements = []; // Array para almacenar Polygons/Polylines del límite punteado
         
         // Variables para Incidentes
@@ -450,6 +473,11 @@
             reductoresLayer = new google.maps.Data(); reductoresLayer.loadGeoJson('./Reductores de Velocidad.geojson');
             solicitudesLayer = new google.maps.Data(); solicitudesLayer.loadGeoJson('./Solicitudes Semaforos 2026.geojson');
 
+            // Capas de Colectivos
+            yitosLayer = new google.maps.Data(); yitosLayer.loadGeoJson('./Recorridos Yitos.geojson');
+            evgLayer = new google.maps.Data(); evgLayer.loadGeoJson('./Recorridos EVG.geojson');
+            autobusesLayer = new google.maps.Data(); autobusesLayer.loadGeoJson('./Recorridos Autobuses.geojson');
+
             // SVG Dinámicos para Infraestructura
             const pathSemaforo = '<rect x="7" y="2" width="10" height="20" rx="3"/><circle cx="12" cy="7" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="17" r="1.5"/>';
             const pathReductor = '<path d="m20.9 18.55-8-15.98a1 1 0 0 0-1.8 0l-8 15.98"/><path d="M4.34 10a11.24 11.24 0 0 1 15.32 0"/><path d="M8.64 14.5a5.42 5.42 0 0 1 6.72 0"/><path d="M2 22h20"/>';
@@ -505,6 +533,11 @@
                 applyStyleWithFilter(reductoresLayer, '#D34872', pathReductor);
                 applyStyleWithFilter(solicitudesLayer, '#4AB5E0', pathSolicitud);
 
+                // Estilos estáticos para líneas de colectivos (usando la paleta institucional)
+                yitosLayer.setStyle(() => ({ strokeColor: '#D34872', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));     // Magenta
+                evgLayer.setStyle(() => ({ strokeColor: '#19567C', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));       // Azul Institucional
+                autobusesLayer.setStyle(() => ({ strokeColor: '#4AB5E0', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 })); // Celeste
+
                 // Polígonos CGM: Se resaltan si se usa el filtro global
                 cgmLayer.setStyle((feature) => {
                     const featCgm = feature.getProperty('CGM');
@@ -554,7 +587,15 @@
                     }
                     content += `</div>`;
                     infoWindow.setContent(content);
-                    infoWindow.setPosition(isPolygon ? event.latLng : event.feature.getGeometry().get());
+                    
+                    // Asegurarnos de posicionarlo correctamente según el tipo de geometría (Punto, Línea, Polígono)
+                    const geomType = event.feature.getGeometry().getType();
+                    if (geomType === 'Point') {
+                        infoWindow.setPosition(event.feature.getGeometry().get());
+                    } else {
+                        infoWindow.setPosition(event.latLng); // Click position for LineStrings/Polygons
+                    }
+
                     infoWindow.open(map);
                     startInfoWindowTimer(); // Iniciar cuenta regresiva al abrir
                 });
@@ -564,6 +605,11 @@
             bindPopup(semaforosLayer, '#19567C', 'Semáforo Activo', false);
             bindPopup(reductoresLayer, '#D34872', 'Reductor de Velocidad', false);
             bindPopup(solicitudesLayer, '#4AB5E0', 'Solicitud 2026', false);
+            
+            // Popups de líneas de colectivos
+            bindPopup(yitosLayer, '#D34872', 'Recorrido Empresa Yitos', false);
+            bindPopup(evgLayer, '#19567C', 'Recorrido Empresa EVG', false);
+            bindPopup(autobusesLayer, '#4AB5E0', 'Recorrido Empresa Autobuses', false);
 
             trafficLayer = new google.maps.TrafficLayer();
 
@@ -700,6 +746,12 @@
             toggleLayer('cb-semaforos', semaforosLayer);
             toggleLayer('cb-reductores', reductoresLayer);
             toggleLayer('cb-solicitudes', solicitudesLayer);
+            
+            // Toggles Colectivos
+            toggleLayer('cb-yitos', yitosLayer);
+            toggleLayer('cb-evg', evgLayer);
+            toggleLayer('cb-autobuses', autobusesLayer);
+
             toggleLayer('cb-trafico', trafficLayer);
             
             document.getElementById('cb-incidentes').addEventListener('change', procesarYMostrarIncidentes);
