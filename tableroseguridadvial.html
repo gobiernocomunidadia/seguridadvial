@@ -427,9 +427,19 @@
 
         // Renderizado de la Tabla Top 10
         function updateTable(incidentesFiltrados) {
+            // Lista de términos "basura" a ignorar en el ranking
+            const terminosIgnorados = ['DS', 'S/D', 'S / D', 'SIN DATOS', 'DESCONOCIDO'];
+
             // Contar incidentes agrupando por dirección (priorizamos columna normalizada)
             const conteoDirecciones = incidentesFiltrados.reduce((acc, curr) => {
-                const dir = curr.direccion_normalizada || curr['Calle y Altura'] || 'Dirección no especificada';
+                let dir = curr.direccion_normalizada || curr['Calle y Altura'] || '';
+                dir = dir.trim();
+
+                // Si la dirección está vacía o está en la lista de ignorados, la saltamos
+                if (!dir || terminosIgnorados.includes(dir.toUpperCase())) {
+                    return acc;
+                }
+
                 acc[dir] = (acc[dir] || 0) + 1;
                 return acc;
             }, {});
