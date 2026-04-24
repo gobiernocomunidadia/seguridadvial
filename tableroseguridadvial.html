@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seguridad Vial | Municipio de Lomas de Zamora</title>
+    <title>AGENCIA VIAL | Municipio de Lomas de Zamora</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -41,9 +41,8 @@
 
     <style>
         body {
-            /* Fondo gradiente extraído de la referencia de Ceamse */
-            background: linear-gradient(90deg, #1E6F99 0%, #35A4D4 50%, #34BBEB 100%);
-            background-attachment: fixed;
+            /* Fondo sólido institucional solicitado */
+            background-color: #19567C;
         }
         .card-kpi {
             /* Borde izquierdo destacado y sombra suave (Regla UI PDF) */
@@ -63,7 +62,7 @@
     <!-- Navbar / Header -->
     <header class="w-full p-6 text-white flex justify-between items-center shadow-md bg-black/10">
         <div>
-            <h1 class="text-2xl font-bold tracking-wide">Seguridad Vial</h1>
+            <h1 class="text-2xl font-bold tracking-wide">AGENCIA VIAL</h1>
             <p class="text-sm font-medium opacity-90">Resumen Diario de Operaciones</p>
         </div>
         <div id="loading-indicator" class="hidden flex items-center space-x-2 bg-white/20 px-4 py-2 rounded-xl">
@@ -85,7 +84,7 @@
         <section class="flex flex-col md:flex-row gap-4 justify-between items-center bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/20">
             <div class="flex flex-col md:flex-row gap-4 w-full md:w-2/3">
                 <div class="w-full md:w-1/2">
-                    <label for="cgm-filter" class="block text-sm font-semibold text-white mb-1">Filtrar por CGM / Delegación</label>
+                    <label for="cgm-filter" class="block text-sm font-semibold text-white mb-1">CGM</label>
                     <select id="cgm-filter" class="w-full bg-white text-institucional-petroleo font-bold rounded-xl p-3 outline-none shadow-sm cursor-pointer focus:ring-2 focus:ring-institucional-fucsia">
                         <option value="TODOS">Total General (Todos los CGM)</option>
                         <!-- Las opciones se inyectarán dinámicamente vía JS -->
@@ -113,7 +112,8 @@
             <article class="card-kpi bg-white rounded-xl p-6 shadow-lg flex flex-col justify-between">
                 <div class="flex justify-between items-start">
                     <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider">Incidentes Vía Pública</h2>
-                    <svg class="w-6 h-6 text-institucional-fucsia" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <!-- Ícono de Cono de Tránsito -->
+                    <svg class="w-7 h-7 text-institucional-fucsia" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="m20.9 18.55-8-15.98a1 1 0 0 0-1.8 0l-8 15.98"/><path d="M16 12H8"/><path d="M3 20h18"/></svg>
                 </div>
                 <div class="mt-4">
                     <span id="kpi-incidentes" class="text-5xl font-extrabold text-institucional-petroleo">0</span>
@@ -124,7 +124,8 @@
             <article class="card-kpi bg-white rounded-xl p-6 shadow-lg flex flex-col justify-between">
                 <div class="flex justify-between items-start">
                     <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider">Semáforos Activos</h2>
-                    <svg class="w-6 h-6 text-institucional-medio" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    <!-- Ícono de Semáforo -->
+                    <svg class="w-7 h-7 text-institucional-medio" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="3"/><circle cx="12" cy="7" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="17" r="1.5"/></svg>
                 </div>
                 <div class="mt-4">
                     <span id="kpi-semaforos" class="text-5xl font-extrabold text-institucional-petroleo">0</span>
@@ -135,7 +136,8 @@
             <article class="card-kpi bg-white rounded-xl p-6 shadow-lg flex flex-col justify-between">
                 <div class="flex justify-between items-start">
                     <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider">Reductores de Velocidad</h2>
-                    <svg class="w-6 h-6 text-institucional-celeste" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <!-- Ícono de Reductor de Velocidad / Loma -->
+                    <svg class="w-7 h-7 text-institucional-celeste" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M2 16h4a6 6 0 0 1 12 0h4"/></svg>
                 </div>
                 <div class="mt-4">
                     <span id="kpi-reductores" class="text-5xl font-extrabold text-institucional-petroleo">0</span>
@@ -179,53 +181,56 @@
 
     <script>
         // ==========================================
-        // LÓGICA DE DATOS - INTEGRACIÓN GITHUB
+        // LÓGICA DE DATOS - TOTALMENTE DINÁMICA
         // ==========================================
 
-        // Estado global
+        // Estado global: Almacena los datos leídos en tiempo real de los archivos
         const AppState = {
             incidentes: [],
             semaforos: [],
             reductores: [],
             cgmsDisponibles: new Set(),
-            periodosDisponibles: new Set() // Nuevo Set para meses y años
+            periodosDisponibles: new Set()
         };
 
+        // Punteros al DOM (Interfaz)
         const DOM = {
             loader: document.getElementById('loading-indicator'),
             selectCGM: document.getElementById('cgm-filter'),
-            selectPeriodo: document.getElementById('periodo-filter'), // Nuevo selector
+            selectPeriodo: document.getElementById('periodo-filter'),
             kpiIncidentes: document.getElementById('kpi-incidentes'),
             kpiSemaforos: document.getElementById('kpi-semaforos'),
             kpiReductores: document.getElementById('kpi-reductores'),
             lastUpdate: document.getElementById('last-update'),
             errorBanner: document.getElementById('error-banner'),
             errorMessage: document.getElementById('error-message'),
-            tablaBody: document.getElementById('top-direcciones-body') // Nuevo ref a tabla
+            tablaBody: document.getElementById('top-direcciones-body')
         };
 
-        let chartInstance = null; // Guardar la instancia de Chart.js para destruirla/redibujarla
+        let chartInstance = null; // Instancia global del gráfico para poder actualizarlo
 
-        // Utilidad: Normaliza texto para matchear "Banfield Este" con "BANFIELD ESTE" sin problemas de tildes
+        // Utilidad: Normaliza texto para poder cruzar "Banfield Este" con "BANFIELD ESTE" sin problemas
         const normalizeString = (str) => {
             if (!str) return 'DESCONOCIDO';
             return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
         };
 
+        // Función Principal de Arranque
         async function initDashboard() {
             DOM.loader.classList.remove('hidden');
             DOM.loader.classList.add('flex');
             
-            // Seteo de fecha base
+            // Seteo de fecha de lectura (Dinámico)
             DOM.lastUpdate.innerText = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
             
             try {
-                // Validación para entornos donde el fetch local/relativo falla (ej: preview en Canvas o file://)
+                // Prevenimos error visual feo si abren el archivo directo en la PC (file://)
                 if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
                     throw new Error("ENTORNO_PREVIEW");
                 }
 
-                // Fetch paralelo de los 3 archivos asumiendo que están en la misma ruta del repo
+                // Fetch paralelo de los 3 archivos. 
+                // IMPORTANTE: Tienen que llamarse exactamente así en la misma carpeta de GitHub
                 const [csvRes, semaforosRes, reductoresRes] = await Promise.all([
                     fetch('./seguridad_vial.csv'),
                     fetch('./Semaforos Activos.geojson'),
@@ -240,14 +245,13 @@
                 const semaforosJson = await semaforosRes.json();
                 const reductoresJson = await reductoresRes.json();
 
-                // 1. Parsear CSV de Incidentes
+                // 1. Parsear CSV de Incidentes (Extraemos Mes/Año y normalizamos CGM)
                 Papa.parse(csvText, {
                     header: true,
-                    delimiter: ";", // Delimitador específico de este dataset
+                    delimiter: ";",
                     skipEmptyLines: true,
                     complete: function(results) {
                         AppState.incidentes = results.data.map(row => {
-                            // Capturamos el periodo para el filtro dinámico
                             if (row['Mes/Año']) AppState.periodosDisponibles.add(row['Mes/Año']);
                             return {
                                 ...row,
@@ -259,7 +263,7 @@
                     }
                 });
 
-                // 2. Parsear GeoJSON de Semáforos (OJO: acá la property viene en 'nombre')
+                // 2. Parsear GeoJSON de Semáforos (Soporta 'nombre' o 'CGM' en properties)
                 AppState.semaforos = semaforosJson.features.map(f => ({
                     ...f,
                     CGM_Norm: normalizeString(f.properties.nombre || f.properties.CGM)
@@ -273,20 +277,18 @@
                 }));
                 extractCGMs(AppState.reductores.map(r => r.CGM_Norm));
 
-                // Renderizar
+                // Llenar selectores y renderizar la primera vista general
                 populateSelects();
                 updateKPIs();
 
             } catch (error) {
                 console.warn("Aviso de carga de datos:", error);
                 
-                // Mostrar banner amigable en la UI en lugar de romper el dashboard
                 DOM.errorBanner.classList.remove('hidden');
-                
                 if (error.message === "ENTORNO_PREVIEW" || error.name === "TypeError") {
-                    DOM.errorMessage.innerText = "No se pueden cargar los archivos en la vista previa o entorno local (protocolo blob/file). El código es correcto, pero necesitas subirlo a GitHub o usar Live Server para visualizar los datos.";
+                    DOM.errorMessage.innerText = "No se pueden cargar los archivos locales en la vista previa. El código es correcto; al alojarlo en GitHub o usar Live Server leerá los CSV/GeoJSON automáticamente.";
                 } else {
-                    DOM.errorMessage.innerText = "Error al intentar leer los archivos. Asegurate de que estén en la misma carpeta que este HTML en tu repositorio de GitHub.";
+                    DOM.errorMessage.innerText = "Error al leer los archivos de datos. Verificá que los archivos estén en la misma carpeta que este HTML con sus nombres exactos.";
                 }
             } finally {
                 DOM.loader.classList.remove('flex');
@@ -294,13 +296,14 @@
             }
         }
 
-        // Extractor de CGMs únicos para armar el filtro dinámico
+        // Extrae delegaciones sin duplicados
         function extractCGMs(cgmArray) {
             cgmArray.forEach(cgm => {
                 if (cgm && cgm !== 'DESCONOCIDO' && cgm !== '') AppState.cgmsDisponibles.add(cgm);
             });
         }
 
+        // Arma los desplegables de Filtros
         function populateSelects() {
             // Llenar CGM alfabéticamente
             const sortedCGMs = Array.from(AppState.cgmsDisponibles).sort();
@@ -311,12 +314,12 @@
                 DOM.selectCGM.appendChild(option);
             });
 
-            // Llenar Periodos y ordenar cronológicamente de forma descendente (MM/YYYY)
+            // Llenar Periodos y ordenar cronológicamente de forma descendente (Más actual primero)
             const sortedPeriodos = Array.from(AppState.periodosDisponibles).sort((a, b) => {
                 const [monthA, yearA] = a.split('/');
                 const [monthB, yearB] = b.split('/');
-                if (yearA !== yearB) return yearB - yearA; // Ordenar por año descendente
-                return monthB - monthA; // Ordenar por mes descendente
+                if (yearA !== yearB) return yearB - yearA;
+                return monthB - monthA;
             });
 
             sortedPeriodos.forEach(periodo => {
@@ -327,7 +330,7 @@
             });
         }
 
-        // Lógica de filtrado de KPIs combinando ambos filtros
+        // Actualiza todo el tablero basado en los filtros seleccionados
         function updateKPIs() {
             const selectedCGM = DOM.selectCGM.value;
             const selectedPeriodo = DOM.selectPeriodo.value;
@@ -336,41 +339,39 @@
             let semaforos = AppState.semaforos;
             let reductores = AppState.reductores;
 
-            // Filtro geográfico (Aplica a los 3 datasets)
+            // Filtro por CGM
             if (selectedCGM !== 'TODOS') {
                 incidentes = incidentes.filter(i => i.CGM_Norm === selectedCGM);
                 semaforos = semaforos.filter(s => s.CGM_Norm === selectedCGM);
                 reductores = reductores.filter(r => r.CGM_Norm === selectedCGM);
             }
 
-            // Filtro temporal (Aplica SÓLO a Incidentes, infraestructura es acumulativa)
+            // Filtro Temporal (Solo para Incidentes)
             if (selectedPeriodo !== 'TODOS') {
                 incidentes = incidentes.filter(i => i.Periodo === selectedPeriodo);
             }
 
+            // Animar KPIs
             animateValue(DOM.kpiIncidentes, incidentes.length);
             animateValue(DOM.kpiSemaforos, semaforos.length);
             animateValue(DOM.kpiReductores, reductores.length);
 
-            // Actualizamos la vista de la línea de tiempo y la tabla top 10
+            // Actualizar Gráficos y Tablas
             updateChart(incidentes);
             updateTable(incidentes);
         }
 
-        // Renderizado del Gráfico (Timeline)
+        // Renderiza Gráfico Dinámico (Chart.js)
         function updateChart(incidentesFiltrados) {
             const ctx = document.getElementById('timeline-chart').getContext('2d');
             
-            // Agrupar cantidades por Periodo
             const conteoPorPeriodo = incidentesFiltrados.reduce((acc, curr) => {
                 const periodo = (curr.Periodo && curr.Periodo !== 'DESCONOCIDO') ? curr.Periodo : 'Sin Fecha';
-                if(periodo !== 'Sin Fecha') {
-                    acc[periodo] = (acc[periodo] || 0) + 1;
-                }
+                if(periodo !== 'Sin Fecha') acc[periodo] = (acc[periodo] || 0) + 1;
                 return acc;
             }, {});
 
-            // Ordenar las etiquetas cronológicamente (MM/YYYY) ascendente para la curva
+            // Orden cronológico ascendente para dibujar la curva (Enero a Diciembre)
             const labels = Object.keys(conteoPorPeriodo).sort((a, b) => {
                 const [mA, yA] = a.split('/');
                 const [mB, yB] = b.split('/');
@@ -379,10 +380,7 @@
 
             const data = labels.map(label => conteoPorPeriodo[label]);
 
-            // Evitamos la sobreposición de gráficos en canvas
-            if (chartInstance) {
-                chartInstance.destroy();
-            }
+            if (chartInstance) chartInstance.destroy(); // Destruir gráfico anterior
 
             chartInstance = new Chart(ctx, {
                 type: 'line',
@@ -391,64 +389,49 @@
                     datasets: [{
                         label: 'Cant. de Incidentes',
                         data: data,
-                        borderColor: '#DF4172', // Fucsia institucional
+                        borderColor: '#DF4172', // Fucsia Institucional
                         backgroundColor: 'rgba(223, 65, 114, 0.1)',
                         borderWidth: 3,
-                        pointBackgroundColor: '#1E6F99', // Petroleo
+                        pointBackgroundColor: '#1E6F99',
                         pointBorderColor: '#ffffff',
                         pointHoverBackgroundColor: '#ffffff',
                         pointHoverBorderColor: '#1E6F99',
                         pointRadius: 4,
                         pointHoverRadius: 6,
                         fill: true,
-                        tension: 0.3 // Curva suave
+                        tension: 0.3
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
+                    plugins: { legend: { display: false } },
                     scales: {
-                        y: { 
-                            beginAtZero: true, 
-                            ticks: { precision: 0, color: '#6b7280' },
-                            grid: { color: '#f3f4f6' }
-                        },
-                        x: { 
-                            ticks: { color: '#6b7280' },
-                            grid: { display: false }
-                        }
+                        y: { beginAtZero: true, ticks: { precision: 0, color: '#6b7280' }, grid: { color: '#f3f4f6' } },
+                        x: { ticks: { color: '#6b7280' }, grid: { display: false } }
                     }
                 }
             });
         }
 
-        // Renderizado de la Tabla Top 10
+        // Renderiza Tabla Top 10 Dinámica (Con filtros de limpieza de datos)
         function updateTable(incidentesFiltrados) {
-            // Lista de términos "basura" a ignorar en el ranking (Ampliada por prevención de errores de tipeo)
+            // Diccionario de exclusiones de datos sucios ("Conocimiento adquirido")
             const terminosIgnorados = ['DS', 'D S', 'S/D', 'S / D', 'S /D', 'S/ D', 'SD', 'SIN DATOS', 'DESCONOCIDO'];
 
-            // Contar incidentes agrupando por dirección (priorizamos columna normalizada)
             const conteoDirecciones = incidentesFiltrados.reduce((acc, curr) => {
                 let dirOriginal = curr.direccion_normalizada || curr['Calle y Altura'] || '';
                 
-                // Limpieza profunda: aplastamos espacios múltiples (ej: "D   S" pasa a ser "D S") y lo pasamos a mayúscula
+                // Limpieza profunda de espacios múltiples
                 let dirLimpia = dirOriginal.replace(/\s+/g, ' ').trim().toUpperCase();
 
-                // Si la dirección está vacía o su versión limpia está en la lista de ignorados, la saltamos
-                if (!dirLimpia || terminosIgnorados.includes(dirLimpia)) {
-                    return acc;
-                }
+                if (!dirLimpia || terminosIgnorados.includes(dirLimpia)) return acc;
 
-                // Usamos la original trimeada para que se vea legible en pantalla
                 let dirFinal = dirOriginal.trim();
                 acc[dirFinal] = (acc[dirFinal] || 0) + 1;
                 return acc;
             }, {});
 
-            // Ordenar de mayor a menor y truncar a los 10 primeros
             const top10 = Object.entries(conteoDirecciones)
                 .sort((a, b) => b[1] - a[1])
                 .slice(0, 10);
@@ -463,8 +446,6 @@
             top10.forEach(([direccion, cantidad], index) => {
                 const tr = document.createElement('tr');
                 tr.className = 'border-b border-gray-100 hover:bg-gray-50 transition-colors';
-                
-                // Resaltar visualmente las primeras 3 posiciones
                 const rankStyle = index < 3 ? 'font-bold text-institucional-fucsia' : 'text-gray-600';
                 
                 tr.innerHTML = `
@@ -475,25 +456,23 @@
             });
         }
 
-        // Animación suave de los números
+        // Efecto visual de cuenta para los números de los KPIs
         function animateValue(obj, end, duration = 600) {
             let startTimestamp = null;
             const step = (timestamp) => {
                 if (!startTimestamp) startTimestamp = timestamp;
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
                 obj.innerHTML = Math.floor(progress * end).toLocaleString('es-AR');
-                if (progress < 1) {
-                    window.requestAnimationFrame(step);
-                }
+                if (progress < 1) window.requestAnimationFrame(step);
             };
             window.requestAnimationFrame(step);
         }
 
-        // Listeners
+        // Disparadores de eventos
         DOM.selectCGM.addEventListener('change', updateKPIs);
         DOM.selectPeriodo.addEventListener('change', updateKPIs);
 
-        // Inicio
+        // Inicializar app
         document.addEventListener('DOMContentLoaded', initDashboard);
     </script>
 </body>
