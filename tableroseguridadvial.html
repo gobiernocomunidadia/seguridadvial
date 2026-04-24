@@ -72,6 +72,12 @@
     <!-- Main Content -->
     <main class="flex-grow p-6 max-w-7xl mx-auto w-full flex flex-col gap-6">
 
+        <!-- Banner de Error (Aviso Local/Preview) -->
+        <div id="error-banner" class="hidden bg-institucional-fucsia/10 border-l-4 border-institucional-fucsia text-gray-800 p-4 rounded-xl shadow-md" role="alert">
+            <p class="font-bold text-institucional-fucsia">Aviso de Entorno Local / Vista Previa</p>
+            <p id="error-message" class="text-sm mt-1">Los datos se cargarán correctamente cuando el dashboard esté alojado en GitHub. Actualmente estás en una vista previa donde el navegador bloquea la carga de archivos locales.</p>
+        </div>
+
         <!-- Controles y Filtros -->
         <section class="flex flex-col md:flex-row justify-between items-center bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/20">
             <div class="w-full md:w-1/3">
@@ -136,28 +142,165 @@
 
     <script>
         // ==========================================
-        // ESQUELETO BASE - LÓGICA A INTEGRAR VÍA GITHUB
+        // LÓGICA DE DATOS - INTEGRACIÓN GITHUB
         // ==========================================
 
-        // Referencias al DOM listas para usar
+        // Estado global
+        const AppState = {
+            incidentes: [],
+            semaforos: [],
+            reductores: [],
+            cgmsDisponibles: new Set()
+        };
+
         const DOM = {
             loader: document.getElementById('loading-indicator'),
             selectCGM: document.getElementById('cgm-filter'),
             kpiIncidentes: document.getElementById('kpi-incidentes'),
             kpiSemaforos: document.getElementById('kpi-semaforos'),
             kpiReductores: document.getElementById('kpi-reductores'),
-            lastUpdate: document.getElementById('last-update')
+            lastUpdate: document.getElementById('last-update'),
+            errorBanner: document.getElementById('error-banner'),
+            errorMessage: document.getElementById('error-message')
         };
 
-        function initDashboard() {
-            console.log("Estructura UI cargada. Esperando vinculación de datos externa...");
+        // Utilidad: Normaliza texto para matchear "Banfield Este" con "BANFIELD ESTE" sin problemas de tildes
+        const normalizeString = (str) => {
+            if (!str) return 'DESCONOCIDO';
+            return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+        };
+
+        async function initDashboard() {
+            DOM.loader.classList.remove('hidden');
+            DOM.loader.classList.add('flex');
             
             // Seteo de fecha base
             DOM.lastUpdate.innerText = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
             
-            // TODO: Inyectar lógica de carga de CSV y GeoJSONs
+            try {
+                // Validación para entornos donde el fetch local/relativo falla (ej: preview en Canvas o file://)
+                if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
+                    throw new Error("ENTORNO_PREVIEW");
+                }
+
+                // Fetch paralelo de los 3 archivos asumiendo que están en la misma ruta del repo
+                const [csvRes, semaforosRes, reductoresRes] = await Promise.all([
+                    fetch('./seguridad_vial.csv'),
+                    fetch('./Semaforos Activos.geojson'),
+                    fetch('./Reductores de Velocidad.geojson')
+                ]);
+
+                if (!csvRes.ok) throw new Error("Fallo al obtener seguridad_vial.csv");
+                if (!semaforosRes.ok) throw new Error("Fallo al obtener Semaforos Activos.geojson");
+                if (!reductoresRes.ok) throw new Error("Fallo al obtener Reductores de Velocidad.geojson");
+
+                const csvText = await csvRes.text();
+                const semaforosJson = await semaforosRes.json();
+                const reductoresJson = await reductoresRes.json();
+
+                // 1. Parsear CSV de Incidentes
+                Papa.parse(csvText, {
+                    header: true,
+                    delimiter: ";", // Delimitador específico de este dataset
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        AppState.incidentes = results.data.map(row => ({
+                            ...row,
+                            CGM_Norm: normalizeString(row.CGM)
+                        }));
+                        extractCGMs(AppState.incidentes.map(i => i.CGM_Norm));
+                    }
+                });
+
+                // 2. Parsear GeoJSON de Semáforos (OJO: acá la property viene en 'nombre')
+                AppState.semaforos = semaforosJson.features.map(f => ({
+                    ...f,
+                    CGM_Norm: normalizeString(f.properties.nombre || f.properties.CGM)
+                }));
+                extractCGMs(AppState.semaforos.map(s => s.CGM_Norm));
+
+                // 3. Parsear GeoJSON de Reductores
+                AppState.reductores = reductoresJson.features.map(f => ({
+                    ...f,
+                    CGM_Norm: normalizeString(f.properties.CGM)
+                }));
+                extractCGMs(AppState.reductores.map(r => r.CGM_Norm));
+
+                // Renderizar
+                populateSelect();
+                updateKPIs('TODOS');
+
+            } catch (error) {
+                console.warn("Aviso de carga de datos:", error);
+                
+                // Mostrar banner amigable en la UI en lugar de romper el dashboard
+                DOM.errorBanner.classList.remove('hidden');
+                
+                if (error.message === "ENTORNO_PREVIEW" || error.name === "TypeError") {
+                    DOM.errorMessage.innerText = "No se pueden cargar los archivos en la vista previa o entorno local (protocolo blob/file). El código es correcto, pero necesitas subirlo a GitHub o usar Live Server para visualizar los datos.";
+                } else {
+                    DOM.errorMessage.innerText = "Error al intentar leer los archivos. Asegurate de que estén en la misma carpeta que este HTML en tu repositorio de GitHub.";
+                }
+            } finally {
+                DOM.loader.classList.remove('flex');
+                DOM.loader.classList.add('hidden');
+            }
         }
 
+        // Extractor de CGMs únicos para armar el filtro dinámico
+        function extractCGMs(cgmArray) {
+            cgmArray.forEach(cgm => {
+                if (cgm && cgm !== 'DESCONOCIDO' && cgm !== '') AppState.cgmsDisponibles.add(cgm);
+            });
+        }
+
+        function populateSelect() {
+            const sortedCGMs = Array.from(AppState.cgmsDisponibles).sort();
+            sortedCGMs.forEach(cgm => {
+                const option = document.createElement('option');
+                option.value = cgm;
+                option.textContent = cgm;
+                DOM.selectCGM.appendChild(option);
+            });
+        }
+
+        // Lógica de filtrado de KPIs
+        function updateKPIs(selectedCGM) {
+            let incidentes = AppState.incidentes;
+            let semaforos = AppState.semaforos;
+            let reductores = AppState.reductores;
+
+            if (selectedCGM !== 'TODOS') {
+                incidentes = AppState.incidentes.filter(i => i.CGM_Norm === selectedCGM);
+                semaforos = AppState.semaforos.filter(s => s.CGM_Norm === selectedCGM);
+                reductores = AppState.reductores.filter(r => r.CGM_Norm === selectedCGM);
+            }
+
+            animateValue(DOM.kpiIncidentes, incidentes.length);
+            animateValue(DOM.kpiSemaforos, semaforos.length);
+            animateValue(DOM.kpiReductores, reductores.length);
+        }
+
+        // Animación suave de los números
+        function animateValue(obj, end, duration = 600) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * end).toLocaleString('es-AR');
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // Listener del Select
+        DOM.selectCGM.addEventListener('change', (e) => {
+            updateKPIs(e.target.value);
+        });
+
+        // Inicio
         document.addEventListener('DOMContentLoaded', initDashboard);
     </script>
 </body>
