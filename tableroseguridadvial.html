@@ -79,16 +79,25 @@
         </div>
 
         <!-- Controles y Filtros -->
-        <section class="flex flex-col md:flex-row justify-between items-center bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/20">
-            <div class="w-full md:w-1/3">
-                <label for="cgm-filter" class="block text-sm font-semibold text-white mb-1">Filtrar por CGM / Delegación</label>
-                <select id="cgm-filter" class="w-full bg-white text-institucional-petroleo font-bold rounded-xl p-3 outline-none shadow-sm cursor-pointer focus:ring-2 focus:ring-institucional-fucsia">
-                    <option value="TODOS">Total General (Todos los CGM)</option>
-                    <!-- Las opciones se inyectarán dinámicamente vía JS -->
-                </select>
+        <section class="flex flex-col md:flex-row gap-4 justify-between items-center bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/20">
+            <div class="flex flex-col md:flex-row gap-4 w-full md:w-2/3">
+                <div class="w-full md:w-1/2">
+                    <label for="cgm-filter" class="block text-sm font-semibold text-white mb-1">Filtrar por CGM / Delegación</label>
+                    <select id="cgm-filter" class="w-full bg-white text-institucional-petroleo font-bold rounded-xl p-3 outline-none shadow-sm cursor-pointer focus:ring-2 focus:ring-institucional-fucsia">
+                        <option value="TODOS">Total General (Todos los CGM)</option>
+                        <!-- Las opciones se inyectarán dinámicamente vía JS -->
+                    </select>
+                </div>
+                <div class="w-full md:w-1/2">
+                    <label for="periodo-filter" class="block text-sm font-semibold text-white mb-1">Filtrar por Mes / Año</label>
+                    <select id="periodo-filter" class="w-full bg-white text-institucional-petroleo font-bold rounded-xl p-3 outline-none shadow-sm cursor-pointer focus:ring-2 focus:ring-institucional-fucsia">
+                        <option value="TODOS">Histórico Total</option>
+                        <!-- Las opciones se inyectarán dinámicamente vía JS -->
+                    </select>
+                </div>
             </div>
             
-            <div class="mt-4 md:mt-0 text-white text-right">
+            <div class="mt-4 md:mt-0 text-white text-right md:w-1/3">
                 <p class="text-sm opacity-80">Última actualización</p>
                 <p class="font-semibold" id="last-update">--/--/----</p>
             </div>
@@ -150,12 +159,14 @@
             incidentes: [],
             semaforos: [],
             reductores: [],
-            cgmsDisponibles: new Set()
+            cgmsDisponibles: new Set(),
+            periodosDisponibles: new Set() // Nuevo Set para meses y años
         };
 
         const DOM = {
             loader: document.getElementById('loading-indicator'),
             selectCGM: document.getElementById('cgm-filter'),
+            selectPeriodo: document.getElementById('periodo-filter'), // Nuevo selector
             kpiIncidentes: document.getElementById('kpi-incidentes'),
             kpiSemaforos: document.getElementById('kpi-semaforos'),
             kpiReductores: document.getElementById('kpi-reductores'),
@@ -204,10 +215,15 @@
                     delimiter: ";", // Delimitador específico de este dataset
                     skipEmptyLines: true,
                     complete: function(results) {
-                        AppState.incidentes = results.data.map(row => ({
-                            ...row,
-                            CGM_Norm: normalizeString(row.CGM)
-                        }));
+                        AppState.incidentes = results.data.map(row => {
+                            // Capturamos el periodo para el filtro dinámico
+                            if (row['Mes/Año']) AppState.periodosDisponibles.add(row['Mes/Año']);
+                            return {
+                                ...row,
+                                CGM_Norm: normalizeString(row.CGM),
+                                Periodo: row['Mes/Año'] || 'DESCONOCIDO'
+                            };
+                        });
                         extractCGMs(AppState.incidentes.map(i => i.CGM_Norm));
                     }
                 });
@@ -227,8 +243,8 @@
                 extractCGMs(AppState.reductores.map(r => r.CGM_Norm));
 
                 // Renderizar
-                populateSelect();
-                updateKPIs('TODOS');
+                populateSelects();
+                updateKPIs();
 
             } catch (error) {
                 console.warn("Aviso de carga de datos:", error);
@@ -254,7 +270,8 @@
             });
         }
 
-        function populateSelect() {
+        function populateSelects() {
+            // Llenar CGM alfabéticamente
             const sortedCGMs = Array.from(AppState.cgmsDisponibles).sort();
             sortedCGMs.forEach(cgm => {
                 const option = document.createElement('option');
@@ -262,18 +279,42 @@
                 option.textContent = cgm;
                 DOM.selectCGM.appendChild(option);
             });
+
+            // Llenar Periodos y ordenar cronológicamente de forma descendente (MM/YYYY)
+            const sortedPeriodos = Array.from(AppState.periodosDisponibles).sort((a, b) => {
+                const [monthA, yearA] = a.split('/');
+                const [monthB, yearB] = b.split('/');
+                if (yearA !== yearB) return yearB - yearA; // Ordenar por año descendente
+                return monthB - monthA; // Ordenar por mes descendente
+            });
+
+            sortedPeriodos.forEach(periodo => {
+                const option = document.createElement('option');
+                option.value = periodo;
+                option.textContent = periodo;
+                DOM.selectPeriodo.appendChild(option);
+            });
         }
 
-        // Lógica de filtrado de KPIs
-        function updateKPIs(selectedCGM) {
+        // Lógica de filtrado de KPIs combinando ambos filtros
+        function updateKPIs() {
+            const selectedCGM = DOM.selectCGM.value;
+            const selectedPeriodo = DOM.selectPeriodo.value;
+
             let incidentes = AppState.incidentes;
             let semaforos = AppState.semaforos;
             let reductores = AppState.reductores;
 
+            // Filtro geográfico (Aplica a los 3 datasets)
             if (selectedCGM !== 'TODOS') {
-                incidentes = AppState.incidentes.filter(i => i.CGM_Norm === selectedCGM);
-                semaforos = AppState.semaforos.filter(s => s.CGM_Norm === selectedCGM);
-                reductores = AppState.reductores.filter(r => r.CGM_Norm === selectedCGM);
+                incidentes = incidentes.filter(i => i.CGM_Norm === selectedCGM);
+                semaforos = semaforos.filter(s => s.CGM_Norm === selectedCGM);
+                reductores = reductores.filter(r => r.CGM_Norm === selectedCGM);
+            }
+
+            // Filtro temporal (Aplica SÓLO a Incidentes, infraestructura es acumulativa)
+            if (selectedPeriodo !== 'TODOS') {
+                incidentes = incidentes.filter(i => i.Periodo === selectedPeriodo);
             }
 
             animateValue(DOM.kpiIncidentes, incidentes.length);
@@ -295,10 +336,9 @@
             window.requestAnimationFrame(step);
         }
 
-        // Listener del Select
-        DOM.selectCGM.addEventListener('change', (e) => {
-            updateKPIs(e.target.value);
-        });
+        // Listeners
+        DOM.selectCGM.addEventListener('change', updateKPIs);
+        DOM.selectPeriodo.addEventListener('change', updateKPIs);
 
         // Inicio
         document.addEventListener('DOMContentLoaded', initDashboard);
