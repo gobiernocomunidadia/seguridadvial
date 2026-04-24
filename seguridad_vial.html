@@ -42,7 +42,7 @@
         .gm-style-iw-d { overflow: hidden !important; }
         button.gm-ui-hover-effect { display: none !important; }
 
-        /* Estilos para Clústeres de Incidentes y Efecto Latir */
+        /* Estilos para Clústeres de Incidentes (Múltiples) */
         .incident-cluster {
             background-color: var(--azul-inst);
             color: white;
@@ -63,14 +63,31 @@
             transform: scale(1.1);
             z-index: 999 !important;
         }
+        /* Efecto Latir para Críticos */
         .pulse-cluster {
-            background-color: var(--azul-inst); /* Azul institucional para la alerta */
+            background-color: var(--azul-inst);
             animation: pulse-animation 1.5s infinite;
         }
         @keyframes pulse-animation {
             0% { box-shadow: 0 0 0 0 rgba(25, 86, 124, 0.7); }
             70% { box-shadow: 0 0 0 15px rgba(25, 86, 124, 0); }
             100% { box-shadow: 0 0 0 0 rgba(25, 86, 124, 0); }
+        }
+
+        /* Estilos para Incidentes Individuales (1 solo) */
+        .incident-single {
+            background-color: var(--azul-inst);
+            border: 1.5px solid white;
+            border-radius: 50%;
+            cursor: pointer;
+            width: 12px;
+            height: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            transition: transform 0.2s;
+        }
+        .incident-single:hover {
+            transform: scale(1.5);
+            z-index: 999 !important;
         }
     </style>
 </head>
@@ -114,7 +131,7 @@
                     </div>
                 </div>
 
-                <!-- SECCIÓN: INCIDENTES (NUEVA) -->
+                <!-- SECCIÓN: INCIDENTES -->
                 <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
                     <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-3 flex items-center gap-2">
                         <i data-lucide="alert-triangle" class="h-4 w-4"></i> Incidentes
@@ -128,7 +145,7 @@
                             <label class="text-xs font-semibold text-gray-600">Filtrar por Mes/Año:</label>
                             <select id="select-mes-ano" class="w-full text-xs p-1.5 border border-gray-300 rounded focus:outline-none focus:border-[#19567C]">
                                 <option value="TODOS">Todos los meses</option>
-                                <!-- Se llena dinámicamente con JS -->
+                                <!-- Se llena dinámicamente -->
                             </select>
                         </div>
                     </div>
@@ -179,12 +196,13 @@
 
     <script>
         let map, trafficLayer, infoWindow;
-        let limiteLayer, cgmLayer, semaforosLayer, reductoresLayer, solicitudesLayer;
+        let cgmLayer, semaforosLayer, reductoresLayer, solicitudesLayer;
+        let limiteElements = []; // Array para almacenar Polygons/Polylines del límite punteado
         
         // Variables para Incidentes
         let incidentDataTotal = [];
         let clusterOverlays = [];
-        let IncidentClusterOverlay; // Clase que se define al iniciar el mapa
+        let IncidentClusterOverlay; 
 
         function initMap() {
             lucide.createIcons();
@@ -211,7 +229,7 @@
             });
 
             // -----------------------------------------------------
-            // DEFINIR CLASE PARA EL CLÚSTER CON EFECTO CSS (PULSO)
+            // DEFINIR CLASE PARA EL CLÚSTER (DINÁMICO)
             // -----------------------------------------------------
             IncidentClusterOverlay = class extends google.maps.OverlayView {
                 constructor(position, count, address, mapInstance, fechas) {
@@ -219,26 +237,28 @@
                     this.position = position;
                     this.count = count;
                     this.address = address;
-                    this.fechas = fechas || []; // Array con todas las fechas
+                    this.fechas = fechas || []; 
                     this.div = null;
                     this.setMap(mapInstance);
                 }
                 onAdd() {
                     this.div = document.createElement('div');
-                    this.div.className = 'incident-cluster';
-                    
-                    // Si hay más de 5, generamos el efecto latir
-                    if (this.count > 5) {
-                        this.div.classList.add('pulse-cluster');
-                    }
-                    this.div.innerHTML = this.count;
                     this.div.style.position = 'absolute';
+                    
+                    if (this.count === 1) {
+                        // Para puntos individuales: pequeño, sin número.
+                        this.div.className = 'incident-single';
+                    } else {
+                        // Para clusters (>1): más grande, con número y latido opcional.
+                        this.div.className = 'incident-cluster';
+                        if (this.count > 5) this.div.classList.add('pulse-cluster');
+                        this.div.innerHTML = this.count;
+                    }
                     
                     this.div.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const criticoHtml = this.count > 5 ? `<p style="margin: 4px 0; font-size: 12px; color: #19567C; font-weight: bold;"><i class="fa-solid fa-triangle-exclamation"></i> ¡Punto Crítico!</p>` : '';
                         
-                        // Generar lista HTML de fechas (Scrollable)
                         const fechasList = this.fechas.map(f => `<li style="margin-bottom: 2px;">${f}</li>`).join('');
                         const fechasHtml = `
                             <div style="margin-top: 10px;">
@@ -272,9 +292,16 @@
                     if (!this.div) return;
                     const overlayProjection = this.getProjection();
                     const pos = overlayProjection.fromLatLngToDivPixel(this.position);
-                    // Centrar el div (mitad de 24px de ancho/alto)
-                    this.div.style.left = (pos.x - 12) + 'px';
-                    this.div.style.top = (pos.y - 12) + 'px';
+                    
+                    if (this.count === 1) {
+                        // Centrar el de 12px
+                        this.div.style.left = (pos.x - 6) + 'px';
+                        this.div.style.top = (pos.y - 6) + 'px';
+                    } else {
+                        // Centrar el de 24px
+                        this.div.style.left = (pos.x - 12) + 'px';
+                        this.div.style.top = (pos.y - 12) + 'px';
+                    }
                 }
                 onRemove() {
                     if (this.div) {
@@ -285,23 +312,65 @@
             };
 
             // -----------------------------------------------------
-            // CARGA DE CAPAS GEOJSON BASE
+            // CARGA DE CAPAS
             // -----------------------------------------------------
-            limiteLayer = new google.maps.Data();
-            limiteLayer.loadGeoJson('./municipios_Lomas de Zamora.geojson'); 
-            limiteLayer.setStyle({ fillColor: '#19567C', fillOpacity: 0.02, strokeColor: '#19567C', strokeWeight: 4, strokeOpacity: 0.8, zIndex: 2 });
-            limiteLayer.setMap(map);
+            
+            // 1. Límite Lomas (Línea Punteada usando Polygon + Polyline)
+            fetch('./municipios_Lomas de Zamora.geojson').then(r => r.json()).then(geoJson => {
+                geoJson.features.forEach(feature => {
+                    if (feature.geometry.type === 'MultiPolygon' || feature.geometry.type === 'Polygon') {
+                        const polys = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
+                        polys.forEach(poly => {
+                            poly.forEach(ring => {
+                                const path = ring.map(coord => ({ lat: coord[1], lng: coord[0] }));
+                                
+                                // Polígono para relleno ligero
+                                const p = new google.maps.Polygon({
+                                    paths: path,
+                                    strokeOpacity: 0,
+                                    fillColor: '#19567C',
+                                    fillOpacity: 0.03,
+                                    map: map,
+                                    zIndex: 2
+                                });
+                                
+                                // Polyline con el guión (línea punteada)
+                                const lineSymbol = { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 };
+                                const l = new google.maps.Polyline({
+                                    path: path,
+                                    strokeOpacity: 0,
+                                    icons: [{ icon: lineSymbol, offset: '0', repeat: '15px' }],
+                                    strokeColor: '#19567C',
+                                    strokeWeight: 3,
+                                    map: map,
+                                    zIndex: 3
+                                });
+                                
+                                limiteElements.push(p, l);
+                            });
+                        });
+                    }
+                });
+            }).catch(e => console.log('Error cargando límite:', e));
 
+            // 2. CGM (Bordes Azules en Negrita)
             cgmLayer = new google.maps.Data();
             cgmLayer.loadGeoJson('./CGM.geojson');
-            cgmLayer.setStyle({ fillColor: '#4AB5E0', fillOpacity: 0.25, strokeColor: '#FFFFFF', strokeWeight: 1.5, strokeOpacity: 1, zIndex: 1 });
+            cgmLayer.setStyle({ 
+                fillColor: '#4AB5E0', 
+                fillOpacity: 0.25, 
+                strokeColor: '#19567C', // Azul Institucional
+                strokeWeight: 3,        // Negrita
+                strokeOpacity: 0.9, 
+                zIndex: 1 
+            });
             cgmLayer.setMap(map);
 
             semaforosLayer = new google.maps.Data(); semaforosLayer.loadGeoJson('./Semaforos Activos.geojson');
             reductoresLayer = new google.maps.Data(); reductoresLayer.loadGeoJson('./Reductores de Velocidad.geojson');
             solicitudesLayer = new google.maps.Data(); solicitudesLayer.loadGeoJson('./Solicitudes Semaforos 2026.geojson');
 
-            // SVG Dinámicos
+            // SVG Dinámicos para Infraestructura
             const pathSemaforo = '<rect x="7" y="2" width="10" height="20" rx="3"/><circle cx="12" cy="7" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="17" r="1.5"/>';
             const pathReductor = '<path d="m20.9 18.55-8-15.98a1 1 0 0 0-1.8 0l-8 15.98"/><path d="M4.34 10a11.24 11.24 0 0 1 15.32 0"/><path d="M8.64 14.5a5.42 5.42 0 0 1 6.72 0"/><path d="M2 22h20"/>';
             const pathSolicitud = '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15h6"/>';
@@ -367,10 +436,9 @@
             trafficLayer = new google.maps.TrafficLayer();
 
             // -----------------------------------------------------
-            // LÓGICA DE INCIDENTES (CSV, CLUSTER, HAVERSINE)
+            // LÓGICA DE INCIDENTES
             // -----------------------------------------------------
 
-            // Fórmula de Haversine para distancias (Metros)
             function getDistanceMeters(lat1, lon1, lat2, lon2) {
                 const R = 6371e3;
                 const φ1 = lat1 * Math.PI/180;
@@ -401,7 +469,6 @@
 
                 let clusters = [];
 
-                // Agrupación por 30 metros
                 dataFiltrada.forEach(row => {
                     const lat = parseFloat(row.Latitud);
                     const lng = parseFloat(row.Longitud);
@@ -415,48 +482,44 @@
                         }
                     }
 
-                    // Obtenemos la fecha exacta del incidente desde el CSV
                     const fecha = row.Fecha_Creacion_dt || 'Fecha desconocida';
 
                     if (foundCluster) {
                         foundCluster.count++;
-                        foundCluster.fechas.push(fecha); // Agregamos la fecha al array del clúster existente
+                        foundCluster.fechas.push(fecha); 
                     } else {
                         clusters.push({
                             lat: lat,
                             lng: lng,
                             count: 1,
                             direccion: row.direccion_normalizada || row['Calle y Altura'] || 'Ubicación Desconocida',
-                            fechas: [fecha] // Creamos el array de fechas con el primer incidente
+                            fechas: [fecha] 
                         });
                     }
                 });
 
-                // Dibujar overlays
                 clusters.forEach(c => {
                     const overlay = new IncidentClusterOverlay(
                         new google.maps.LatLng(c.lat, c.lng), 
                         c.count, 
                         c.direccion, 
                         map,
-                        c.fechas // Pasamos las fechas a la clase Overlay
+                        c.fechas 
                     );
                     clusterOverlays.push(overlay);
                 });
             }
 
-            // Cargar CSV usando PapaParse
             fetch('./seguridad_vial.csv')
                 .then(response => response.text())
                 .then(csvText => {
                     Papa.parse(csvText, {
                         header: true,
-                        delimiter: ";", // Ajustado según tu archivo
+                        delimiter: ";", 
                         skipEmptyLines: true,
                         complete: function(results) {
                             incidentDataTotal = results.data;
                             
-                            // Extraer Meses/Años únicos
                             const mesesSet = new Set();
                             incidentDataTotal.forEach(r => {
                                 if (r['Mes/Año']) mesesSet.add(r['Mes/Año']);
@@ -470,7 +533,6 @@
                                 selectMesAno.appendChild(option);
                             });
 
-                            // Eventos de filtro
                             selectMesAno.addEventListener('change', procesarYMostrarIncidentes);
                         }
                     });
@@ -479,20 +541,25 @@
 
 
             // --- CHECKBOXES TOGGLES ---
+            // Límite tiene lógica especial por ser un Array de elementos
+            document.getElementById('cb-limite').addEventListener('change', (e) => {
+                const m = e.target.checked ? map : null;
+                limiteElements.forEach(el => el.setMap(m));
+            });
+
+            // Resto de capas
             const toggleLayer = (id, layerInstance) => {
                 document.getElementById(id).addEventListener('change', (e) => {
                     e.target.checked ? layerInstance.setMap(map) : layerInstance.setMap(null);
                 });
             };
 
-            toggleLayer('cb-limite', limiteLayer);
             toggleLayer('cb-cgm', cgmLayer);
             toggleLayer('cb-semaforos', semaforosLayer);
             toggleLayer('cb-reductores', reductoresLayer);
             toggleLayer('cb-solicitudes', solicitudesLayer);
             toggleLayer('cb-trafico', trafficLayer);
             
-            // Toggle Incidentes especial
             document.getElementById('cb-incidentes').addEventListener('change', procesarYMostrarIncidentes);
         }
     </script>
