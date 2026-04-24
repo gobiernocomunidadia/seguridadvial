@@ -44,7 +44,7 @@
 
         /* Estilos para Clústeres de Incidentes y Efecto Latir */
         .incident-cluster {
-            background-color: var(--magenta);
+            background-color: var(--azul-inst);
             color: white;
             border: 2px solid white;
             border-radius: 50%;
@@ -52,11 +52,11 @@
             align-items: center;
             justify-content: center;
             font-weight: 800;
-            font-size: 11px;
+            font-size: 10px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.4);
             cursor: pointer;
-            width: 28px;
-            height: 28px;
+            width: 24px;
+            height: 24px;
             transition: transform 0.2s;
         }
         .incident-cluster:hover {
@@ -64,13 +64,13 @@
             z-index: 999 !important;
         }
         .pulse-cluster {
-            background-color: #E11D48; /* Un magenta más vibrante para la alerta */
+            background-color: var(--azul-inst); /* Azul institucional para la alerta */
             animation: pulse-animation 1.5s infinite;
         }
         @keyframes pulse-animation {
-            0% { box-shadow: 0 0 0 0 rgba(211, 72, 114, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(211, 72, 114, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(211, 72, 114, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(25, 86, 124, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(25, 86, 124, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(25, 86, 124, 0); }
         }
     </style>
 </head>
@@ -214,11 +214,12 @@
             // DEFINIR CLASE PARA EL CLÚSTER CON EFECTO CSS (PULSO)
             // -----------------------------------------------------
             IncidentClusterOverlay = class extends google.maps.OverlayView {
-                constructor(position, count, address, mapInstance) {
+                constructor(position, count, address, mapInstance, fechas) {
                     super();
                     this.position = position;
                     this.count = count;
                     this.address = address;
+                    this.fechas = fechas || []; // Array con todas las fechas
                     this.div = null;
                     this.setMap(mapInstance);
                 }
@@ -235,13 +236,28 @@
                     
                     this.div.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        const criticoHtml = this.count > 5 ? `<p style="margin: 4px 0; font-size: 12px; color: #D34872; font-weight: bold;"><i class="fa-solid fa-triangle-exclamation"></i> ¡Punto Crítico!</p>` : '';
+                        const criticoHtml = this.count > 5 ? `<p style="margin: 4px 0; font-size: 12px; color: #19567C; font-weight: bold;"><i class="fa-solid fa-triangle-exclamation"></i> ¡Punto Crítico!</p>` : '';
+                        
+                        // Generar lista HTML de fechas (Scrollable)
+                        const fechasList = this.fechas.map(f => `<li style="margin-bottom: 2px;">${f}</li>`).join('');
+                        const fechasHtml = `
+                            <div style="margin-top: 10px;">
+                                <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 700; color: #19567C;">Fechas Registradas:</p>
+                                <div class="custom-scrollbar" style="max-height: 80px; overflow-y: auto; background-color: #F3F6F9; border-radius: 4px; padding: 4px 8px; border: 1px solid #E6EDF3;">
+                                    <ul style="margin: 0; padding-left: 12px; color: #475569; font-size: 11px;">
+                                        ${fechasList}
+                                    </ul>
+                                </div>
+                            </div>
+                        `;
+
                         const content = `
-                            <div style="font-family: 'Montserrat', sans-serif; min-width: 180px;">
-                                <h3 style="font-weight: 800; font-size: 14px; color: #D34872; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">Zona de Incidentes</h3>
+                            <div style="font-family: 'Montserrat', sans-serif; min-width: 220px;">
+                                <h3 style="font-weight: 800; font-size: 14px; color: #19567C; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">Zona de Incidentes</h3>
                                 <p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Dirección:</b> ${this.address}</p>
                                 <p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Total Registrados:</b> ${this.count}</p>
                                 ${criticoHtml}
+                                ${fechasHtml}
                             </div>
                         `;
                         infoWindow.setContent(content);
@@ -256,9 +272,9 @@
                     if (!this.div) return;
                     const overlayProjection = this.getProjection();
                     const pos = overlayProjection.fromLatLngToDivPixel(this.position);
-                    // Centrar el div (mitad de 28px de ancho/alto)
-                    this.div.style.left = (pos.x - 14) + 'px';
-                    this.div.style.top = (pos.y - 14) + 'px';
+                    // Centrar el div (mitad de 24px de ancho/alto)
+                    this.div.style.left = (pos.x - 12) + 'px';
+                    this.div.style.top = (pos.y - 12) + 'px';
                 }
                 onRemove() {
                     if (this.div) {
@@ -308,9 +324,9 @@
 
             function updatePointStyles() {
                 const zoom = map.getZoom();
-                let size = 14;   
-                if (zoom >= 15) { size = 28; }       
-                else if (zoom >= 13) { size = 20; } 
+                let size = 10;   
+                if (zoom >= 15) { size = 20; }       
+                else if (zoom >= 13) { size = 14; } 
 
                 semaforosLayer.setStyle({ icon: getSvgIcon('#19567C', pathSemaforo, size), zIndex: 10 });
                 reductoresLayer.setStyle({ icon: getSvgIcon('#D34872', pathReductor, size), zIndex: 10 });
@@ -399,14 +415,19 @@
                         }
                     }
 
+                    // Obtenemos la fecha exacta del incidente desde el CSV
+                    const fecha = row.Fecha_Creacion_dt || 'Fecha desconocida';
+
                     if (foundCluster) {
                         foundCluster.count++;
+                        foundCluster.fechas.push(fecha); // Agregamos la fecha al array del clúster existente
                     } else {
                         clusters.push({
                             lat: lat,
                             lng: lng,
                             count: 1,
-                            direccion: row.direccion_normalizada || row['Calle y Altura'] || 'Ubicación Desconocida'
+                            direccion: row.direccion_normalizada || row['Calle y Altura'] || 'Ubicación Desconocida',
+                            fechas: [fecha] // Creamos el array de fechas con el primer incidente
                         });
                     }
                 });
@@ -417,7 +438,8 @@
                         new google.maps.LatLng(c.lat, c.lng), 
                         c.count, 
                         c.direccion, 
-                        map
+                        map,
+                        c.fechas // Pasamos las fechas a la clase Overlay
                     );
                     clusterOverlays.push(overlay);
                 });
