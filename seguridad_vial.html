@@ -40,7 +40,32 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
         }
         .gm-style-iw-d { overflow: hidden !important; }
-        button.gm-ui-hover-effect { display: none !important; }
+        button.gm-ui-hover-effect { display: none !important; } /* Ocultamos el botón nativo de Google */
+
+        /* Estilos del Botón de Cierre Personalizado */
+        .custom-close-btn {
+            position: absolute;
+            right: -4px;
+            top: -6px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #94A3B8;
+            font-size: 22px;
+            font-weight: bold;
+            line-height: 1;
+            padding: 2px 6px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            z-index: 50;
+        }
+        .custom-close-btn:hover {
+            background-color: #F1F5F9;
+            color: var(--bg-main);
+        }
+        .incident-close:hover {
+            color: var(--magenta);
+        }
 
         /* Estilos para Clústeres de Incidentes (Múltiples) */
         .incident-cluster {
@@ -215,9 +240,19 @@
         function startInfoWindowTimer() {
             if (infoWindowTimer) clearTimeout(infoWindowTimer);
             infoWindowTimer = setTimeout(() => {
-                infoWindow.close();
+                if (infoWindow) infoWindow.close();
             }, 10000); // 10 segundos
         }
+
+        // --- FUNCIÓN GLOBAL PARA EL BOTÓN MANUAL DE CIERRE ---
+        window.closeInfoWindow = function() {
+            if (infoWindow) {
+                infoWindow.close();
+            }
+            if (infoWindowTimer) {
+                clearTimeout(infoWindowTimer);
+            }
+        };
 
         function initMap() {
             lucide.createIcons();
@@ -311,8 +346,9 @@
                         `;
 
                         const content = `
-                            <div style="font-family: 'Montserrat', sans-serif; min-width: 220px;">
-                                <h3 style="font-weight: 800; font-size: 14px; color: #19567C; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">Zona de Incidentes</h3>
+                            <div style="font-family: 'Montserrat', sans-serif; min-width: 220px; position: relative;">
+                                <button onclick="window.closeInfoWindow()" class="custom-close-btn incident-close">&times;</button>
+                                <h3 style="font-weight: 800; font-size: 14px; color: #19567C; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px; padding-right: 20px;">Zona de Incidentes</h3>
                                 <p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Dirección:</b> ${this.address}</p>
                                 <p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Total Registrados:</b> ${this.count}</p>
                                 ${criticoHtml}
@@ -503,15 +539,16 @@
             function bindPopup(layer, colorTitle, defaultTitle, isPolygon) {
                 layer.addListener('click', function(event) {
                     const name = event.feature.getProperty('Name') || event.feature.getProperty('nombre') || defaultTitle;
-                    let content = `<div style="font-family: 'Montserrat', sans-serif; min-width: 180px;">`;
+                    let content = `<div style="font-family: 'Montserrat', sans-serif; min-width: 180px; position: relative;">`;
+                    content += `<button onclick="window.closeInfoWindow()" class="custom-close-btn">&times;</button>`;
                     
                     if (isPolygon) {
-                        content += `<h3 style="font-weight: 800; font-size: 14px; color: ${colorTitle}; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">CGM: ${event.feature.getProperty('CGM')}</h3>`;
+                        content += `<h3 style="font-weight: 800; font-size: 14px; color: ${colorTitle}; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px; padding-right: 20px;">CGM: ${event.feature.getProperty('CGM')}</h3>`;
                         content += `<p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Manzanas:</b> ${event.feature.getProperty('Manzanas') || '-'}</p>`;
                         content += `<p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Cuadras:</b> ${event.feature.getProperty('Cuadras') || '-'}</p>`;
                         content += `<p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Viviendas:</b> ${event.feature.getProperty('Viviendas') || '-'}</p>`;
                     } else {
-                        content += `<h3 style="font-weight: 800; font-size: 14px; color: ${colorTitle}; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">${name}</h3>`;
+                        content += `<h3 style="font-weight: 800; font-size: 14px; color: ${colorTitle}; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px; padding-right: 20px;">${name}</h3>`;
                         if (event.feature.getProperty('description')) content += `<p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Detalle:</b> ${event.feature.getProperty('description')}</p>`;
                         if (event.feature.getProperty('CGM')) content += `<p style="margin: 4px 0; font-size: 12px; color: #333;"><b>CGM:</b> ${event.feature.getProperty('CGM')}</p>`;
                     }
