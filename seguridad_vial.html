@@ -74,19 +74,14 @@
             100% { box-shadow: 0 0 0 0 rgba(25, 86, 124, 0); }
         }
 
-        /* Estilos para Incidentes Individuales (1 solo) */
+        /* Estilos para Incidentes Individuales (SVG Dinámico) */
         .incident-single {
-            background-color: var(--azul-inst);
-            border: 1.5px solid white;
-            border-radius: 50%;
             cursor: pointer;
-            width: 12px;
-            height: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
             transition: transform 0.2s;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
         }
         .incident-single:hover {
-            transform: scale(1.5);
+            transform: scale(1.3);
             z-index: 999 !important;
         }
     </style>
@@ -114,6 +109,17 @@
             
             <div class="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-6">
                 
+                <!-- SECCIÓN: FILTRO GLOBAL (NUEVO) -->
+                <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30 shadow-sm">
+                    <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-2 flex items-center gap-2">
+                        <i data-lucide="crosshair" class="h-4 w-4"></i> Filtro Global de Zona
+                    </h4>
+                    <select id="filtro-global-cgm" class="w-full text-xs p-2 border border-[#19567C]/30 rounded focus:outline-none focus:border-[#19567C] font-semibold text-[#0F172A] cursor-pointer">
+                        <option value="TODOS">TODOS LOS CGM</option>
+                        <!-- Se llena dinámicamente -->
+                    </select>
+                </div>
+
                 <!-- SECCIÓN: DIVISIÓN TERRITORIAL -->
                 <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
                     <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-3 flex items-center gap-2">
@@ -229,7 +235,7 @@
             });
 
             // -----------------------------------------------------
-            // DEFINIR CLASE PARA EL CLÚSTER (DINÁMICO)
+            // DEFINIR CLASE PARA EL CLÚSTER Y PUNTO INDIVIDUAL
             // -----------------------------------------------------
             IncidentClusterOverlay = class extends google.maps.OverlayView {
                 constructor(position, count, address, mapInstance, fechas) {
@@ -246,10 +252,19 @@
                     this.div.style.position = 'absolute';
                     
                     if (this.count === 1) {
-                        // Para puntos individuales: pequeño, sin número.
+                        // Para puntos individuales: SVG con icono de alerta/triangulo
                         this.div.className = 'incident-single';
+                        const iconAlert = '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="9" x2="12" y2="13" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>';
+                        this.div.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="100%" height="100%" style="display:block;">
+                                <circle cx="16" cy="16" r="15" fill="#19567C" stroke="#FFFFFF" stroke-width="2"/>
+                                <g transform="translate(4, 4) scale(0.75)">
+                                    ${iconAlert}
+                                </g>
+                            </svg>
+                        `;
                     } else {
-                        // Para clusters (>1): más grande, con número y latido opcional.
+                        // Para clusters (>1): con número y latido opcional.
                         this.div.className = 'incident-cluster';
                         if (this.count > 5) this.div.classList.add('pulse-cluster');
                         this.div.innerHTML = this.count;
@@ -294,11 +309,18 @@
                     const pos = overlayProjection.fromLatLngToDivPixel(this.position);
                     
                     if (this.count === 1) {
-                        // Centrar el de 12px
-                        this.div.style.left = (pos.x - 6) + 'px';
-                        this.div.style.top = (pos.y - 6) + 'px';
+                        // Cambiamos tamaño baseado en el zoom igual que getSvgIcon
+                        const zoom = this.getMap().getZoom();
+                        let size = 10;   
+                        if (zoom >= 15) { size = 20; }       
+                        else if (zoom >= 13) { size = 14; } 
+
+                        this.div.style.width = size + 'px';
+                        this.div.style.height = size + 'px';
+                        this.div.style.left = (pos.x - size/2) + 'px';
+                        this.div.style.top = (pos.y - size/2) + 'px';
                     } else {
-                        // Centrar el de 24px
+                        // Centrar el cluster de 24px
                         this.div.style.left = (pos.x - 12) + 'px';
                         this.div.style.top = (pos.y - 12) + 'px';
                     }
@@ -315,7 +337,7 @@
             // CARGA DE CAPAS
             // -----------------------------------------------------
             
-            // 1. Límite Lomas (Línea Punteada usando Polygon + Polyline)
+            // 1. Límite Lomas (Línea Punteada)
             fetch('./municipios_Lomas de Zamora.geojson').then(r => r.json()).then(geoJson => {
                 geoJson.features.forEach(feature => {
                     if (feature.geometry.type === 'MultiPolygon' || feature.geometry.type === 'Polygon') {
@@ -323,29 +345,9 @@
                         polys.forEach(poly => {
                             poly.forEach(ring => {
                                 const path = ring.map(coord => ({ lat: coord[1], lng: coord[0] }));
-                                
-                                // Polígono para relleno ligero
-                                const p = new google.maps.Polygon({
-                                    paths: path,
-                                    strokeOpacity: 0,
-                                    fillColor: '#19567C',
-                                    fillOpacity: 0.03,
-                                    map: map,
-                                    zIndex: 2
-                                });
-                                
-                                // Polyline con el guión (línea punteada)
+                                const p = new google.maps.Polygon({ paths: path, strokeOpacity: 0, fillColor: '#19567C', fillOpacity: 0.03, map: map, zIndex: 2 });
                                 const lineSymbol = { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 };
-                                const l = new google.maps.Polyline({
-                                    path: path,
-                                    strokeOpacity: 0,
-                                    icons: [{ icon: lineSymbol, offset: '0', repeat: '15px' }],
-                                    strokeColor: '#19567C',
-                                    strokeWeight: 3,
-                                    map: map,
-                                    zIndex: 3
-                                });
-                                
+                                const l = new google.maps.Polyline({ path: path, strokeOpacity: 0, icons: [{ icon: lineSymbol, offset: '0', repeat: '15px' }], strokeColor: '#19567C', strokeWeight: 3, map: map, zIndex: 3 });
                                 limiteElements.push(p, l);
                             });
                         });
@@ -353,17 +355,34 @@
                 });
             }).catch(e => console.log('Error cargando límite:', e));
 
-            // 2. CGM (Bordes Azules en Negrita)
+            // 2. Cargar CGM GeoJSON para Polígonos y Llenar Filtro Global
             cgmLayer = new google.maps.Data();
-            cgmLayer.loadGeoJson('./CGM.geojson');
-            cgmLayer.setStyle({ 
-                fillColor: '#4AB5E0', 
-                fillOpacity: 0.25, 
-                strokeColor: '#19567C', // Azul Institucional
-                strokeWeight: 3,        // Negrita
-                strokeOpacity: 0.9, 
-                zIndex: 1 
-            });
+            fetch('./CGM.geojson').then(r => r.json()).then(geoJson => {
+                cgmLayer.addGeoJson(geoJson);
+                
+                // Llenar Filtro Global
+                const cgmSet = new Set();
+                geoJson.features.forEach(f => {
+                    if (f.properties && f.properties.CGM) cgmSet.add(f.properties.CGM.toUpperCase());
+                });
+                
+                const selectGlobalCgm = document.getElementById('filtro-global-cgm');
+                Array.from(cgmSet).sort().forEach(cgm => {
+                    const opt = document.createElement('option');
+                    opt.value = cgm;
+                    opt.textContent = cgm;
+                    selectGlobalCgm.appendChild(opt);
+                });
+                
+                // Disparar filtros
+                selectGlobalCgm.addEventListener('change', () => {
+                    updatePointStyles();
+                    procesarYMostrarIncidentes();
+                });
+
+                updatePointStyles(); // Aplicar estilos iniciales
+            }).catch(e => console.log('Error cargando CGM:', e));
+
             cgmLayer.setMap(map);
 
             semaforosLayer = new google.maps.Data(); semaforosLayer.loadGeoJson('./Semaforos Activos.geojson');
@@ -391,19 +410,69 @@
                 };
             }
 
+            // Esta función ahora también filtra dinámicamente según el Filtro Global
             function updatePointStyles() {
                 const zoom = map.getZoom();
                 let size = 10;   
                 if (zoom >= 15) { size = 20; }       
                 else if (zoom >= 13) { size = 14; } 
 
-                semaforosLayer.setStyle({ icon: getSvgIcon('#19567C', pathSemaforo, size), zIndex: 10 });
-                reductoresLayer.setStyle({ icon: getSvgIcon('#D34872', pathReductor, size), zIndex: 10 });
-                solicitudesLayer.setStyle({ icon: getSvgIcon('#4AB5E0', pathSolicitud, size), zIndex: 10 });
+                const globalCgmSelect = document.getElementById('filtro-global-cgm');
+                const globalCgm = globalCgmSelect ? globalCgmSelect.value : "TODOS";
+
+                // Función auxiliar para aplicar estilo y visibilidad a capas de puntos
+                const applyStyleWithFilter = (layer, color, path) => {
+                    layer.setStyle((feature) => {
+                        const featCgm = feature.getProperty('CGM') || feature.getProperty('cgm');
+                        let isVisible = true;
+                        
+                        if (globalCgm !== "TODOS") {
+                            if (!featCgm || featCgm.toUpperCase() !== globalCgm) {
+                                isVisible = false;
+                            }
+                        }
+                        
+                        return {
+                            icon: getSvgIcon(color, path, size),
+                            zIndex: 10,
+                            visible: isVisible
+                        };
+                    });
+                };
+
+                applyStyleWithFilter(semaforosLayer, '#19567C', pathSemaforo);
+                applyStyleWithFilter(reductoresLayer, '#D34872', pathReductor);
+                applyStyleWithFilter(solicitudesLayer, '#4AB5E0', pathSolicitud);
+
+                // Polígonos CGM: Se resaltan si se usa el filtro global
+                cgmLayer.setStyle((feature) => {
+                    const featCgm = feature.getProperty('CGM');
+                    let isVisible = true;
+                    let opacidad = 0.25;
+                    let grosor = 3;
+
+                    if (globalCgm !== "TODOS") {
+                        if (!featCgm || featCgm.toUpperCase() !== globalCgm) {
+                            isVisible = false; // Oculta polígonos que no son el seleccionado
+                        } else {
+                            opacidad = 0.4; // Resalta el polígono seleccionado
+                            grosor = 4;
+                        }
+                    }
+
+                    return {
+                        fillColor: '#4AB5E0', 
+                        fillOpacity: opacidad, 
+                        strokeColor: '#19567C', 
+                        strokeWeight: grosor,        
+                        strokeOpacity: 0.9, 
+                        zIndex: 1,
+                        visible: isVisible
+                    };
+                });
             }
 
             map.addListener('zoom_changed', updatePointStyles);
-            updatePointStyles();
 
             // Ventanas Emergentes base
             function bindPopup(layer, colorTitle, defaultTitle, isPolygon) {
@@ -436,7 +505,7 @@
             trafficLayer = new google.maps.TrafficLayer();
 
             // -----------------------------------------------------
-            // LÓGICA DE INCIDENTES
+            // LÓGICA DE INCIDENTES CON FILTRO GLOBAL APLICADO
             // -----------------------------------------------------
 
             function getDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -461,10 +530,22 @@
                 if (!document.getElementById('cb-incidentes').checked) return;
 
                 const mesFiltro = document.getElementById('select-mes-ano').value;
+                const globalCgmSelect = document.getElementById('filtro-global-cgm');
+                const globalCgm = globalCgmSelect ? globalCgmSelect.value : "TODOS";
+
                 let dataFiltrada = incidentDataTotal;
                 
+                // Filtro por Mes
                 if (mesFiltro !== "TODOS") {
-                    dataFiltrada = incidentDataTotal.filter(d => d['Mes/Año'] === mesFiltro);
+                    dataFiltrada = dataFiltrada.filter(d => d['Mes/Año'] === mesFiltro);
+                }
+
+                // Filtro Global por CGM
+                if (globalCgm !== "TODOS") {
+                    dataFiltrada = dataFiltrada.filter(d => {
+                        const rowCgm = d['CGM'] || "";
+                        return rowCgm.toUpperCase() === globalCgm;
+                    });
                 }
 
                 let clusters = [];
@@ -541,13 +622,11 @@
 
 
             // --- CHECKBOXES TOGGLES ---
-            // Límite tiene lógica especial por ser un Array de elementos
             document.getElementById('cb-limite').addEventListener('change', (e) => {
                 const m = e.target.checked ? map : null;
                 limiteElements.forEach(el => el.setMap(m));
             });
 
-            // Resto de capas
             const toggleLayer = (id, layerInstance) => {
                 document.getElementById(id).addEventListener('change', (e) => {
                     e.target.checked ? layerInstance.setMap(map) : layerInstance.setMap(null);
