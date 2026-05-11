@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Agencia Vial</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --bg-main: #19567C;
+            --blanco: #FFFFFF;
+            --acento: #4AB5E0;
+            --magenta: #D34872;
+            --azul-inst: #19567C;
+        }
+
+        body { 
+            font-family: 'Montserrat', sans-serif; 
+            background-color: #f8fafc; 
+            color: #0F172A; 
+            margin: 0; 
+            min-height: 100vh; 
+        }
+        
+        .header-bg { background-color: var(--bg-main); }
+        .text-acento { color: var(--acento); }
+        .bg-acento { background-color: var(--acento); }
+        .text-magenta { color: var(--magenta); }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #F3F6F9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E6EDF3; border-radius: 4px; }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+
+    <header class="header-bg shadow-lg border-b-4 border-[var(--acento)] z-20 py-4 px-4 shrink-0 text-white">
+        <div class="max-w-[1600px] mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="bg-white text-[var(--bg-main)] rounded-full h-12 w-12 flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-chart-line text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-extrabold tracking-tight uppercase leading-none">Dashboard Vial</h1>
+                    <p class="text-sm text-acento font-semibold">Análisis de Datos e Infraestructura</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-[1600px] mx-auto p-4 flex-1 flex flex-col lg:flex-row gap-6 overflow-hidden">
+        
+        <aside class="w-full lg:w-80 bg-white rounded-xl shadow-md border border-[#E6EDF3] flex flex-col shrink-0 z-20 overflow-y-auto custom-scrollbar">
+            <div class="p-4 border-b bg-[#F3F6F9] flex items-center gap-2">
+                <i data-lucide="filter" class="text-[#19567C] h-5 w-5"></i>
+                <h3 class="font-bold text-[#0F172A] uppercase text-sm">Filtros Interactivos</h3>
+            </div>
+            
+            <div class="p-5 space-y-6 flex-1">
+                <div class="bg-[#19567C]/5 p-3 rounded-lg border border-[#19567C]/20 shadow-sm">
+                    <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-2 flex items-center gap-2">
+                        <i data-lucide="map-pin" class="h-4 w-4"></i> Zona / CGM
+                    </h4>
+                    <select id="filtro-cgm" class="w-full text-xs p-2 border border-[#19567C]/30 rounded focus:outline-none focus:border-[#19567C] font-semibold text-[#0F172A] cursor-pointer">
+                        <option value="TODOS">Todos los CGM</option>
+                    </select>
+                </div>
+
+                <div class="bg-[#19567C]/5 p-3 rounded-lg border border-[#19567C]/20 shadow-sm">
+                    <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-2 flex items-center gap-2">
+                        <i data-lucide="calendar" class="h-4 w-4"></i> Rango de Fechas
+                    </h4>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Desde:</label>
+                            <input type="date" id="fecha-desde" class="w-full text-xs p-2 border border-[#19567C]/30 rounded focus:outline-none focus:border-[#19567C] font-semibold text-[#0F172A]">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Hasta:</label>
+                            <input type="date" id="fecha-hasta" class="w-full text-xs p-2 border border-[#19567C]/30 rounded focus:outline-none focus:border-[#19567C] font-semibold text-[#0F172A]">
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="btn-limpiar" class="w-full bg-[#19567C] hover:bg-[#0F354D] text-white font-bold py-2 px-4 rounded text-sm transition-colors shadow">
+                    Limpiar Filtros
+                </button>
+            </div>
+        </aside>
+
+        <div class="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar pb-10 pr-2">
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white rounded-xl shadow-md border border-[#E6EDF3] p-4 flex items-center gap-4 border-l-4 border-l-[var(--magenta)] transition-transform hover:scale-105">
+                    <div class="bg-[var(--magenta)]/10 text-[var(--magenta)] rounded-full h-12 w-12 flex items-center justify-center">
+                        <i class="fa-solid fa-car-burst text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase">Total Incidentes</p>
+                        <h2 id="kpi-accidentes" class="text-2xl font-extrabold text-[#19567C]">0</h2>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md border border-[#E6EDF3] p-4 flex items-center gap-4 border-l-4 border-l-[var(--acento)] transition-transform hover:scale-105">
+                    <div class="bg-[var(--acento)]/10 text-[var(--acento)] rounded-full h-12 w-12 flex items-center justify-center">
+                        <i class="fa-solid fa-traffic-light text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase">Semáforos Activos</p>
+                        <h2 id="kpi-semaforos" class="text-2xl font-extrabold text-[#19567C]">0</h2>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md border border-[#E6EDF3] p-4 flex items-center gap-4 border-l-4 border-l-[var(--bg-main)] transition-transform hover:scale-105">
+                    <div class="bg-[#19567C]/10 text-[#19567C] rounded-full h-12 w-12 flex items-center justify-center">
+                        <i class="fa-solid fa-road-barrier text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase">Reductores Velocidad</p>
+                        <h2 id="kpi-reductores" class="text-2xl font-extrabold text-[#19567C]">0</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-[400px]">
+                
+                <div class="bg-white p-4 rounded-xl shadow-md border border-[#E6EDF3] flex flex-col">
+                    <h3 class="font-bold text-[#19567C] uppercase text-sm mb-4 border-b pb-2"><i class="fa-solid fa-timeline mr-2"></i> Evolución de Incidentes</h3>
+                    <div class="flex-1 relative w-full h-full min-h-[250px]">
+                        <canvas id="chartEvolucion"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-md border border-[#E6EDF3] flex flex-col">
+                    <h3 class="font-bold text-[#19567C] uppercase text-sm mb-4 border-b pb-2"><i class="fa-solid fa-chart-pie mr-2"></i> Incidentes Top por CGM</h3>
+                    <div class="flex-1 relative w-full h-full min-h-[250px]">
+                        <canvas id="chartCGM"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // Inicializar Iconos
+        lucide.createIcons();
+
+        // Variables Globales y Estado
+        let datosAccidentes = [];
+        let datosSemaforos = [];
+        let datosReductores = [];
+        let chartEvoInstance = null;
+        let chartCGMInstance = null;
+
+        const colores = {
+            main: '#19567C',
+            acento: '#4AB5E0',
+            magenta: '#D34872'
+        };
+
+        // Elementos DOM
+        const kpiAcc = document.getElementById('kpi-accidentes');
+        const kpiSem = document.getElementById('kpi-semaforos');
+        const kpiRed = document.getElementById('kpi-reductores');
+        const filtroCGM = document.getElementById('filtro-cgm');
+        const fechaDesde = document.getElementById('fecha-desde');
+        const fechaHasta = document.getElementById('fecha-hasta');
+
+        async function initDashboard() {
+            try {
+                // Fetch concurrente de la información adjunta
+                const [accRes, semRes, redRes] = await Promise.all([
+                    fetch('seguridad_vial.csv').catch(() => null),
+                    fetch('Semaforos Activos.geojson').catch(() => null),
+                    fetch('Reductores de Velocidad.geojson').catch(() => null)
+                ]);
+
+                // Procesamiento CSV (PapaParse)
+                if (accRes && accRes.ok) {
+                    const csvText = await accRes.text();
+                    Papa.parse(csvText, {
+                        header: true,
+                        delimiter: ";",
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            datosAccidentes = results.data;
+                            poblarFiltros();
+                            configurarFechasBase();
+                            actualizarDashboard();
+                        }
+                    });
+                }
+
+                // Procesamiento GeoJSON
+                if (semRes && semRes.ok) {
+                    const geo = await semRes.json();
+                    datosSemaforos = geo.features || [];
+                }
+                
+                if (redRes && redRes.ok) {
+                    const geo = await redRes.json();
+                    datosReductores = geo.features || [];
+                }
+
+                // Setup Listeners para Filtros Interactivos
+                filtroCGM.addEventListener('change', actualizarDashboard);
+                fechaDesde.addEventListener('change', actualizarDashboard);
+                fechaHasta.addEventListener('change', actualizarDashboard);
+                
+                document.getElementById('btn-limpiar').addEventListener('click', () => {
+                    filtroCGM.value = 'TODOS';
+                    configurarFechasBase();
+                    actualizarDashboard();
+                });
+
+                actualizarDashboard(); // Refresco base si los geojson cargan antes
+
+            } catch (error) {
+                console.error("Error cargando los datos del dashboard:", error);
+            }
+        }
+
+        // Llenado dinámico del Select CGM (Zona)
+        function poblarFiltros() {
+            const cgms = new Set();
+            datosAccidentes.forEach(d => {
+                let cgm = d.CGM ? d.CGM.trim().toUpperCase() : '';
+                if(cgm) cgms.add(cgm);
+            });
+            // Agregamos también los de Semaforos y Reductores
+            datosSemaforos.forEach(s => {
+                let cgm = s.properties.CGM ? s.properties.CGM.trim().toUpperCase() : '';
+                if(cgm) cgms.add(cgm);
+            });
+            
+            const arrCGM = Array.from(cgms).sort();
+            arrCGM.forEach(cgm => {
+                const opt = document.createElement('option');
+                opt.value = cgm;
+                opt.textContent = cgm;
+                filtroCGM.appendChild(opt);
+            });
+        }
+
+        // Determinar Rango Fechas Base Automático
+        function configurarFechasBase() {
+            let fechas = datosAccidentes.map(d => d.Fecha).filter(f => f && f.includes('-')).sort();
+            if(fechas.length > 0) {
+                fechaDesde.value = fechas[0];
+                fechaHasta.value = fechas[fechas.length - 1];
+            }
+        }
+
+        // Filtrado Unificado y Dispatch
+        function actualizarDashboard() {
+            const cgmSel = filtroCGM.value.toUpperCase();
+            const fDesde = fechaDesde.value;
+            const fHasta = fechaHasta.value;
+
+            // 1. Filtrar Accidentes
+            const accFiltrados = datosAccidentes.filter(d => {
+                if(!d.Fecha) return false;
+                let cgmData = d.CGM ? d.CGM.trim().toUpperCase() : '';
+                let matchCGM = (cgmSel === 'TODOS' || cgmData === cgmSel);
+                let matchFecha = (!fDesde || d.Fecha >= fDesde) && (!fHasta || d.Fecha <= fHasta);
+                return matchCGM && matchFecha;
+            });
+
+            // 2. Filtrar GeoJSON
+            const semFiltrados = datosSemaforos.filter(d => {
+                let cgmData = d.properties.CGM ? d.properties.CGM.trim().toUpperCase() : '';
+                return cgmSel === 'TODOS' || cgmData === cgmSel;
+            });
+
+            const redFiltrados = datosReductores.filter(d => {
+                let cgmData = d.properties.CGM ? d.properties.CGM.trim().toUpperCase() : '';
+                return cgmSel === 'TODOS' || cgmData === cgmSel;
+            });
+
+            // Actualizar Tarjetas KPI
+            kpiAcc.innerText = accFiltrados.length;
+            kpiSem.innerText = semFiltrados.length;
+            kpiRed.innerText = redFiltrados.length;
+
+            // Actualizar Gráficas
+            renderChartEvolucion(accFiltrados);
+            renderChartCGM(accFiltrados);
+        }
+
+        // Gráfica Escala de Tiempo (Timeline)
+        function renderChartEvolucion(datos) {
+            const grupos = {};
+            datos.forEach(d => {
+                let f = d.Fecha;
+                if(!f) return;
+                grupos[f] = (grupos[f] || 0) + 1;
+            });
+
+            const fechas = Object.keys(grupos).sort();
+            const valores = fechas.map(f => grupos[f]);
+
+            const ctx = document.getElementById('chartEvolucion').getContext('2d');
+            
+            if(chartEvoInstance) chartEvoInstance.destroy();
+
+            chartEvoInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: fechas,
+                    datasets: [{
+                        label: 'Incidentes Diarios',
+                        data: valores,
+                        borderColor: colores.magenta,
+                        backgroundColor: colores.magenta + '33',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2,
+                        pointBackgroundColor: colores.magenta
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false } 
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { borderDash: [2, 4], color: '#E6EDF3' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Gráfica Barras de Distribución
+        function renderChartCGM(datos) {
+            const grupos = {};
+            datos.forEach(d => {
+                let cgm = d.CGM ? d.CGM.trim().toUpperCase() : 'NO DEFINIDO';
+                grupos[cgm] = (grupos[cgm] || 0) + 1;
+            });
+
+            // Ordenar para mostrar los Tops
+            const sorted = Object.keys(grupos).sort((a,b) => grupos[b] - grupos[a]).slice(0, 10);
+            const valores = sorted.map(k => grupos[k]);
+
+            const ctx = document.getElementById('chartCGM').getContext('2d');
+            
+            if(chartCGMInstance) chartCGMInstance.destroy();
+
+            chartCGMInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sorted,
+                    datasets: [{
+                        label: 'Incidentes por Zona',
+                        data: valores,
+                        backgroundColor: colores.acento,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { borderDash: [2, 4], color: '#E6EDF3' } 
+                        }
+                    }
+                }
+            });
+        }
+
+        // Ejecutar carga al inicializar
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>
