@@ -265,11 +265,11 @@
 
     <script>
         let map, trafficLayer, infoWindow;
-        let infoWindowTimer; 
+        let infoWindowTimer; // Temporizador global para el cierre automático
         let cgmLayer, semaforosLayer, reductoresLayer, solicitudesLayer;
-        let yitosLayer, evgLayer, autobusesLayer; 
-        let provincialesLayer, nacionalesLayer; 
-        let limiteElements = []; 
+        let yitosLayer, evgLayer, autobusesLayer; // Capas de colectivos municipales
+        let provincialesLayer, nacionalesLayer; // Capas de colectivos provinciales/nacionales
+        let limiteElements = []; // Array para almacenar Polygons/Polylines del límite punteado
         
         // Variables para Incidentes
         let incidentDataTotal = [];
@@ -281,7 +281,7 @@
             if (infoWindowTimer) clearTimeout(infoWindowTimer);
             infoWindowTimer = setTimeout(() => {
                 if (infoWindow) infoWindow.close();
-            }, 10000); 
+            }, 10000); // 10 segundos
         }
 
         // --- FUNCIÓN GLOBAL PARA EL BOTÓN MANUAL DE CIERRE ---
@@ -302,9 +302,11 @@
             google.maps.event.addListener(infoWindow, 'domready', () => {
                 const iwContainer = document.querySelector('.gm-style-iw-c');
                 if (iwContainer) {
+                    // Si el usuario pasa el mouse, pausamos el contador
                     iwContainer.addEventListener('mouseenter', () => {
                         if (infoWindowTimer) clearTimeout(infoWindowTimer);
                     });
+                    // Si el usuario saca el mouse, reiniciamos los 10 segundos
                     iwContainer.addEventListener('mouseleave', () => {
                         startInfoWindowTimer();
                     });
@@ -352,6 +354,7 @@
                     this.div.style.position = 'absolute';
                     
                     if (this.count === 1) {
+                        // Para puntos individuales: SVG con icono de alerta/triangulo
                         this.div.className = 'incident-single';
                         const iconAlert = '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="9" x2="12" y2="13" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>';
                         this.div.innerHTML = `
@@ -363,6 +366,7 @@
                             </svg>
                         `;
                     } else {
+                        // Para clusters (>1): con número y latido opcional.
                         this.div.className = 'incident-cluster';
                         if (this.count > 5) this.div.classList.add('pulse-cluster');
                         this.div.innerHTML = this.count;
@@ -397,7 +401,7 @@
                         infoWindow.setContent(content);
                         infoWindow.setPosition(this.position);
                         infoWindow.open(this.getMap());
-                        startInfoWindowTimer();
+                        startInfoWindowTimer(); // Iniciar cuenta regresiva al abrir
                     });
 
                     const panes = this.getPanes();
@@ -409,6 +413,7 @@
                     const pos = overlayProjection.fromLatLngToDivPixel(this.position);
                     
                     if (this.count === 1) {
+                        // Cambiamos tamaño baseado en el zoom igual que getSvgIcon
                         const zoom = this.getMap().getZoom();
                         let size = 10;   
                         if (zoom >= 15) { size = 20; }       
@@ -419,6 +424,7 @@
                         this.div.style.left = (pos.x - size/2) + 'px';
                         this.div.style.top = (pos.y - size/2) + 'px';
                     } else {
+                        // Centrar el cluster de 24px
                         this.div.style.left = (pos.x - 12) + 'px';
                         this.div.style.top = (pos.y - 12) + 'px';
                     }
@@ -435,6 +441,7 @@
             // CARGA DE CAPAS
             // -----------------------------------------------------
             
+            // 1. Límite Lomas (Línea Punteada)
             fetch('./municipios_Lomas de Zamora.geojson').then(r => r.json()).then(geoJson => {
                 geoJson.features.forEach(feature => {
                     if (feature.geometry.type === 'MultiPolygon' || feature.geometry.type === 'Polygon') {
@@ -452,10 +459,12 @@
                 });
             }).catch(e => console.log('Error cargando límite:', e));
 
+            // 2. Cargar CGM GeoJSON para Polígonos y Llenar Filtro Global
             cgmLayer = new google.maps.Data();
             fetch('./CGM.geojson').then(r => r.json()).then(geoJson => {
                 cgmLayer.addGeoJson(geoJson);
                 
+                // Llenar Filtro Global
                 const cgmSet = new Set();
                 geoJson.features.forEach(f => {
                     if (f.properties && f.properties.CGM) cgmSet.add(f.properties.CGM.toUpperCase());
@@ -469,12 +478,13 @@
                     selectGlobalCgm.appendChild(opt);
                 });
                 
+                // Disparar filtros
                 selectGlobalCgm.addEventListener('change', () => {
                     updatePointStyles();
                     procesarYMostrarIncidentes();
                 });
 
-                updatePointStyles(); 
+                updatePointStyles(); // Aplicar estilos iniciales
             }).catch(e => console.log('Error cargando CGM:', e));
 
             cgmLayer.setMap(map);
@@ -483,12 +493,14 @@
             reductoresLayer = new google.maps.Data(); reductoresLayer.loadGeoJson('./Reductores de Velocidad.geojson');
             solicitudesLayer = new google.maps.Data(); solicitudesLayer.loadGeoJson('./Solicitudes Semaforos 2026.geojson');
 
+            // Capas de Colectivos
             yitosLayer = new google.maps.Data(); yitosLayer.loadGeoJson('./Recorridos Yitos.geojson');
             evgLayer = new google.maps.Data(); evgLayer.loadGeoJson('./Recorridos EVG.geojson');
             autobusesLayer = new google.maps.Data(); autobusesLayer.loadGeoJson('./Recorridos Autobuses.geojson');
             provincialesLayer = new google.maps.Data(); provincialesLayer.loadGeoJson('./Recorridos Provinciales.geojson');
             nacionalesLayer = new google.maps.Data(); nacionalesLayer.loadGeoJson('./Recorridos Nacionales.geojson');
 
+            // SVG Dinámicos para Infraestructura
             const pathSemaforo = '<rect x="7" y="2" width="10" height="20" rx="3"/><circle cx="12" cy="7" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="17" r="1.5"/>';
             const pathReductor = '<path d="m20.9 18.55-8-15.98a1 1 0 0 0-1.8 0l-8 15.98"/><path d="M4.34 10a11.24 11.24 0 0 1 15.32 0"/><path d="M8.64 14.5a5.42 5.42 0 0 1 6.72 0"/><path d="M2 22h20"/>';
             const pathSolicitud = '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15h6"/>';
@@ -509,6 +521,7 @@
                 };
             }
 
+            // Esta función ahora también filtra dinámicamente según el Filtro Global (usando CGM estrictamente)
             function updatePointStyles() {
                 const zoom = map.getZoom();
                 let size = 10;   
@@ -518,6 +531,7 @@
                 const globalCgmSelect = document.getElementById('filtro-global-cgm');
                 const globalCgm = globalCgmSelect ? globalCgmSelect.value : "TODOS";
 
+                // Función auxiliar para aplicar estilo y visibilidad a capas de puntos
                 const applyStyleWithFilter = (layer, color, path) => {
                     layer.setStyle((feature) => {
                         const featCgm = feature.getProperty('CGM');
@@ -541,12 +555,14 @@
                 applyStyleWithFilter(reductoresLayer, '#D34872', pathReductor);
                 applyStyleWithFilter(solicitudesLayer, '#4AB5E0', pathSolicitud);
 
-                yitosLayer.setStyle(() => ({ strokeColor: '#D34872', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));         
-                evgLayer.setStyle(() => ({ strokeColor: '#19567C', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));           
-                autobusesLayer.setStyle(() => ({ strokeColor: '#4AB5E0', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));     
-                provincialesLayer.setStyle(() => ({ strokeColor: '#D34872', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));  
-                nacionalesLayer.setStyle(() => ({ strokeColor: '#19567C', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));    
+                // Estilos estáticos para líneas de colectivos (usando la paleta institucional)
+                yitosLayer.setStyle(() => ({ strokeColor: '#D34872', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));         // Magenta
+                evgLayer.setStyle(() => ({ strokeColor: '#19567C', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));           // Azul Institucional
+                autobusesLayer.setStyle(() => ({ strokeColor: '#4AB5E0', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));     // Celeste
+                provincialesLayer.setStyle(() => ({ strokeColor: '#D34872', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));  // Magenta
+                nacionalesLayer.setStyle(() => ({ strokeColor: '#19567C', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));    // Azul
 
+                // Polígonos CGM: Se resaltan si se usa el filtro global
                 cgmLayer.setStyle((feature) => {
                     const featCgm = feature.getProperty('CGM');
                     let isVisible = true;
@@ -555,9 +571,9 @@
 
                     if (globalCgm !== "TODOS") {
                         if (!featCgm || featCgm.toUpperCase() !== globalCgm) {
-                            isVisible = false; 
+                            isVisible = false; // Oculta polígonos que no son el seleccionado
                         } else {
-                            opacidad = 0.4; 
+                            opacidad = 0.4; // Resalta el polígono seleccionado
                             grosor = 4;
                         }
                     }
@@ -576,6 +592,7 @@
 
             map.addListener('zoom_changed', updatePointStyles);
 
+            // Ventanas Emergentes base
             function bindPopup(layer, colorTitle, defaultTitle, isPolygon) {
                 layer.addListener('click', function(event) {
                     const name = event.feature.getProperty('Name') || defaultTitle;
@@ -595,15 +612,16 @@
                     content += `</div>`;
                     infoWindow.setContent(content);
                     
+                    // Asegurarnos de posicionarlo correctamente según el tipo de geometría (Punto, Línea, Polígono)
                     const geomType = event.feature.getGeometry().getType();
                     if (geomType === 'Point') {
                         infoWindow.setPosition(event.feature.getGeometry().get());
                     } else {
-                        infoWindow.setPosition(event.latLng); 
+                        infoWindow.setPosition(event.latLng); // Click position for LineStrings/Polygons
                     }
 
                     infoWindow.open(map);
-                    startInfoWindowTimer(); 
+                    startInfoWindowTimer(); // Iniciar cuenta regresiva al abrir
                 });
             }
 
@@ -612,6 +630,7 @@
             bindPopup(reductoresLayer, '#D34872', 'Reductor de Velocidad', false);
             bindPopup(solicitudesLayer, '#4AB5E0', 'Solicitud 2026', false);
             
+            // Popups de líneas de colectivos
             bindPopup(yitosLayer, '#D34872', 'Recorrido Empresa Yitos', false);
             bindPopup(evgLayer, '#19567C', 'Recorrido Empresa EVG', false);
             bindPopup(autobusesLayer, '#4AB5E0', 'Recorrido Empresa Autobuses', false);
@@ -716,8 +735,28 @@
                             incidentDataTotal = results.data;
                             
                             const mesesSet = new Set();
+                            
+                            // Adaptación al nuevo formato CSV
                             incidentDataTotal.forEach(r => {
-                                if (r['Mes/Año']) mesesSet.add(r['Mes/Año']);
+                                r['Latitud'] = r['Lat'];
+                                r['Longitud'] = r['Lon'];
+
+                                if (r['Fecha']) {
+                                    const parts = r['Fecha'].split('-');
+                                    if (parts.length >= 2) {
+                                        const mesAno = parts[1] + '/' + parts[0];
+                                        r['Mes/Año'] = mesAno;
+                                        mesesSet.add(mesAno);
+                                    }
+                                }
+
+                                let dir = "";
+                                if (r['Calle']) dir += r['Calle'];
+                                if (r['Altura'] && r['Altura'] !== '0') dir += " " + r['Altura'];
+                                if (r['Interseccion']) dir += " y " + r['Interseccion'];
+                                r['direccion_normalizada'] = dir.trim() !== "" ? dir : "Ubicación Desconocida";
+
+                                r['Fecha_Creacion_dt'] = (r['Fecha'] || '') + ' ' + (r['Hora'] || '');
                             });
                             
                             const selectMesAno = document.getElementById('select-mes-ano');
