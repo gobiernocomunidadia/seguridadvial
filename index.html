@@ -170,22 +170,6 @@
                     </div>
                 </div>
 
-                <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
-                    <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-1 flex items-center gap-2">
-                        <i data-lucide="bus" class="h-4 w-4"></i> Colectivos
-                    </h4>
-                    <div class="space-y-3 mb-4">
-                        <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" id="cb-yitos" class="w-4 h-4 accent-[#19567C]">
-                            <span class="text-sm text-[#0F172A] font-bold">Empresa Yitos</span>
-                        </label>
-                        <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" id="cb-evg" class="w-4 h-4 accent-[#19567C]">
-                            <span class="text-sm text-[#0F172A] font-bold">Empresa EVG</span>
-                        </label>
-                    </div>
-                </div>
-
             </div>
         </aside>
 
@@ -198,7 +182,7 @@
 
     <script>
         let map, infoWindow, infoWindowTimer; 
-        let cgmLayer, semaforosLayer, reductoresLayer, yitosLayer, evgLayer; 
+        let cgmLayer, semaforosLayer, reductoresLayer; 
         let limitePolygons = []; 
         let limitePolylines = [];
         
@@ -236,9 +220,7 @@
                 { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
                 { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
                 { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-                { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
-                { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9e8f5" }] },
-                { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] }
+                { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] }
             ];
 
             map = new google.maps.Map(document.getElementById("map"), {
@@ -347,7 +329,7 @@
             }
 
             // -----------------------------------------------------
-            // LÓGICA DE INCIDENTES Y HEATMAP
+            // LÓGICA DE INCIDENTES (CALIBRACIÓN FINA DEL GRADIENTE)
             // -----------------------------------------------------
             function limpiarVisualizaciones() {
                 clusterOverlays.forEach(o => o.setMap(null)); 
@@ -410,12 +392,14 @@
                                 const capa = new google.maps.visualization.HeatmapLayer({
                                     data: heatmapData,
                                     map: map,
-                                    radius: 40,
-                                    maxIntensity: 6,
+                                    radius: 50, // Radio suavizado
+                                    maxIntensity: 15, // Intensidad aumentada para evitar bordes duros
                                     gradient: [
                                         'rgba(0, 0, 0, 0)',
-                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`,
-                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.5)`,
+                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`, // Transiciones ultra suaves
+                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`,
+                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`,
+                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.9)`,
                                         `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`
                                     ]
                                 });
@@ -435,13 +419,15 @@
                             heatmapLayer = new google.maps.visualization.HeatmapLayer({
                                 data: heatmapData,
                                 map: map,
-                                radius: 40, 
-                                maxIntensity: 6, 
+                                radius: 50, // Radio suavizado
+                                maxIntensity: 15, // Intensidad aumentada para permitir un degradado gradual
                                 gradient: [
                                     'rgba(0, 0, 0, 0)',
-                                    'rgba(74, 181, 224, 0)',
+                                    'rgba(74, 181, 224, 0.1)', // Pasos mucho más progresivos
+                                    'rgba(74, 181, 224, 0.3)', 
                                     'rgba(74, 181, 224, 0.6)', 
-                                    'rgba(25, 86, 124, 0.9)',  
+                                    'rgba(25, 86, 124, 0.8)',  
+                                    'rgba(25, 86, 124, 1)',  
                                     'rgba(211, 72, 114, 1)'    
                                 ]
                             });
@@ -458,8 +444,8 @@
                     }
 
                     data.forEach(row => {
-                        let lat = parseFloat((row.Latitud||'').toString().replace(',', '.');
-                        let lng = parseFloat((row.Longitud||'').toString().replace(',', '.');
+                        let lat = parseFloat((row.Latitud||'').toString().replace(',', '.'));
+                        let lng = parseFloat((row.Longitud||'').toString().replace(',', '.'));
                         if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
                         
                         let found = clusters.find(c => (!esMultiMes || c.mes === row['Mes/Año']) && getDist(lat, lng, c.lat, c.lng) <= 30);
