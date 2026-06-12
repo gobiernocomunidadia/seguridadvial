@@ -167,6 +167,10 @@
                             <input type="checkbox" id="cb-reductores" class="w-4 h-4 accent-[#19567C]">
                             <span class="text-sm text-[#0F172A] font-bold">Reductores de Velocidad</span>
                         </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-solicitudes" class="w-4 h-4 accent-[#19567C]">
+                            <span class="text-sm text-[#0F172A] font-bold">Solicitudes Semáforos 2026</span>
+                        </label>
                     </div>
                 </div>
 
@@ -198,16 +202,15 @@
 
     <script>
         let map, infoWindow, infoWindowTimer; 
-        let cgmLayer, semaforosLayer, reductoresLayer, yitosLayer, evgLayer; 
+        let cgmLayer, semaforosLayer, reductoresLayer, solicitudesLayer, yitosLayer, evgLayer; 
         let limitePolygons = []; 
         let limitePolylines = [];
         
         let incidentDataTotal = [];
         let clusterOverlays = [];
-        let heatmapOverlays = []; 
+        let heatmapOverlays = []; // Aquí guardaremos los círculos de calor
+        
         let IncidentClusterOverlay; 
-        let CSSHeatmapOverlay; 
-
         let mesColorMap = {};
         const coloresDisponibles = ['#19567C', '#D34872', '#4AB5E0', '#F59E0B', '#10B981', '#8B5CF6'];
 
@@ -231,9 +234,7 @@
                 { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
                 { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
                 { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-                { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
-                { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9e8f5" }] },
-                { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] }
+                { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] }
             ];
 
             map = new google.maps.Map(document.getElementById("map"), {
@@ -243,9 +244,6 @@
                 mapTypeControl: false, streetViewControl: false
             });
 
-            // -----------------------------------------------------------
-            // 1. CLASE: PUNTOS INDIVIDUALES Y CLUSTERS CLÁSICOS
-            // -----------------------------------------------------------
             IncidentClusterOverlay = class extends google.maps.OverlayView {
                 constructor(position, count, address, mapInstance, fechas, color) {
                     super();
@@ -270,7 +268,7 @@
                         mostrarPopupIncidente(this.position, this.address, this.count, this.fechas);
                     });
                     const panes = this.getPanes();
-                    panes.overlayMouseTarget.appendChild(this.div); 
+                    panes.overlayMouseTarget.appendChild(this.div);
                 }
                 draw() {
                     if (!this.div) return;
@@ -280,74 +278,6 @@
                     this.div.style.left = (pos.x - size/2) + 'px'; this.div.style.top = (pos.y - size/2) + 'px';
                 }
                 onRemove() { if (this.div) { this.div.parentNode.removeChild(this.div); this.div = null; } }
-            };
-
-            // -----------------------------------------------------------
-            // 2. CLASE: MOTOR DE CALOR PERSONALIZADO (RADIO ACHICADO)
-            // -----------------------------------------------------------
-            CSSHeatmapOverlay = class extends google.maps.OverlayView {
-                constructor(position, count, mapInstance, esMultiMes, colorAsignado) {
-                    super();
-                    this.position = position;
-                    this.count = count;
-                    this.esMultiMes = esMultiMes;
-                    this.colorAsignado = colorAsignado;
-                    this.div = null;
-                    this.setMap(mapInstance);
-                }
-                onAdd() {
-                    this.div = document.createElement('div');
-                    this.div.style.position = 'absolute';
-                    this.div.style.pointerEvents = 'none'; 
-                    this.div.style.transform = 'translate(-50%, -50%)';
-                    
-                    let r, g, b;
-                    if (this.esMultiMes) {
-                        let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(this.colorAsignado || '#19567C');
-                        r = result ? parseInt(result[1], 16) : 25;
-                        g = result ? parseInt(result[2], 16) : 86;
-                        b = result ? parseInt(result[3], 16) : 124;
-                    } else {
-                        let intensity = Math.min(1.0, this.count / 12);
-                        if (intensity < 0.5) {
-                            let f = intensity * 2;
-                            r = Math.round(74 + f * (25 - 74));
-                            g = Math.round(181 + f * (86 - 181));
-                            b = Math.round(224 + f * (124 - 224));
-                        } else {
-                            let f = (intensity - 0.5) * 2;
-                            r = Math.round(25 + f * (211 - 25));
-                            g = Math.round(86 + f * (72 - 86));
-                            b = Math.round(124 + f * (114 - 124));
-                        }
-                    }
-                    
-                    let alpha = Math.min(0.85, 0.25 + (this.count * 0.08));
-                    // ACHICAMOS EL PORCENTAJE DEL GRADIENTE PARA QUE SE DIFUMINE MÁS RÁPIDO Y NO SEA TAN GRANDE
-                    this.div.style.background = `radial-gradient(circle, rgba(${r},${g},${b},${alpha}) 0%, rgba(${r},${g},${b},0) 55%)`;
-                    this.div.style.mixBlendMode = 'multiply'; 
-                    
-                    const panes = this.getPanes();
-                    panes.overlayLayer.appendChild(this.div); 
-                }
-                draw() {
-                    if (!this.div) return;
-                    const zoom = this.getMap().getZoom();
-                    const pos = this.getProjection().fromLatLngToDivPixel(this.position);
-                    
-                    let scale = Math.max(0.4, (zoom - 10) / 3); 
-                    // REDUJIMOS DRÁSTICAMENTE EL TAMAÑO BASE DE LA MANCHA (de 100px a 40px base)
-                    let baseSize = 40 + Math.min(this.count * 8, 70); 
-                    let finalSize = baseSize * scale;
-                    
-                    this.div.style.width = finalSize + 'px';
-                    this.div.style.height = finalSize + 'px';
-                    this.div.style.left = pos.x + 'px';
-                    this.div.style.top = pos.y + 'px';
-                }
-                onRemove() {
-                    if (this.div) { this.div.parentNode.removeChild(this.div); this.div = null; }
-                }
             };
 
             function mostrarPopupIncidente(position, address, count, fechas) {
@@ -391,6 +321,9 @@
 
             semaforosLayer = new google.maps.Data(); semaforosLayer.loadGeoJson('./Semaforos Activos.geojson');
             reductoresLayer = new google.maps.Data(); reductoresLayer.loadGeoJson('./Reductores de Velocidad.geojson');
+            solicitudesLayer = new google.maps.Data(); solicitudesLayer.loadGeoJson('./Solicitudes Semaforos 2026.geojson');
+            yitosLayer = new google.maps.Data(); yitosLayer.loadGeoJson('./Recorridos Yitos.geojson');
+            evgLayer = new google.maps.Data(); evgLayer.loadGeoJson('./Recorridos EVG.geojson');
 
             function getSvgIcon(color, path) {
                 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="16" height="16"><circle cx="16" cy="16" r="15" fill="${color}" stroke="#FFFFFF" stroke-width="2"/><g fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(6, 6) scale(0.83)">${path}</g></svg>`;
@@ -399,6 +332,7 @@
 
             semaforosLayer.setStyle(() => ({ icon: getSvgIcon('#19567C', '<rect x="7" y="2" width="10" height="20" rx="3"/><circle cx="12" cy="7" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="17" r="1.5"/>') }));
             reductoresLayer.setStyle(() => ({ icon: getSvgIcon('#D34872', '<path d="m20.9 18.55-8-15.98a1 1 0 0 0-1.8 0l-8 15.98"/><path d="M4.34 10a11.24 11.24 0 0 1 15.32 0"/><path d="M8.64 14.5a5.42 5.42 0 0 1 6.72 0"/><path d="M2 22h20"/>') }));
+            solicitudesLayer.setStyle(() => ({ icon: getSvgIcon('#4AB5E0', '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15h6"/>') }));
 
             function actualizarVisibilidadCapasBase() {
                 const sel = document.getElementById('filtro-global-cgm').value;
@@ -414,12 +348,12 @@
             }
 
             // -----------------------------------------------------
-            // PROCESAMIENTO E INYECCIÓN DE DATOS
+            // EL MOTOR DE MAPA DE CALOR SEGURO Y DEFINITIVO
             // -----------------------------------------------------
             function limpiarVisualizaciones() {
                 clusterOverlays.forEach(o => o.setMap(null)); 
                 clusterOverlays = [];
-                heatmapOverlays.forEach(hm => hm.setMap(null)); 
+                heatmapOverlays.forEach(o => o.setMap(null)); 
                 heatmapOverlays = [];
             }
 
@@ -442,52 +376,65 @@
                 const tipoVista = document.querySelector('input[name="tipo-visualizacion"]:checked').value;
                 const esMultiMes = !cbMeses.includes('TODOS') && cbMeses.length > 1;
 
+                let clusters = [];
+                function getDist(lat1, lon1, lat2, lon2) {
+                    const R = 6371e3; const p1 = lat1 * Math.PI/180; const p2 = lat2 * Math.PI/180;
+                    const dp = (lat2-lat1) * Math.PI/180; const dl = (lon2-lon1) * Math.PI/180;
+                    const a = Math.sin(dp/2)**2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2)**2;
+                    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
+                }
+
+                data.forEach(row => {
+                    let lat = parseFloat((row.Latitud||'').toString().replace(',', '.'));
+                    let lng = parseFloat((row.Longitud||'').toString().replace(',', '.'));
+                    if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
+                    
+                    let found = clusters.find(c => (!esMultiMes || c.mes === row['Mes/Año']) && getDist(lat, lng, c.lat, c.lng) <= 30);
+                    const fecha = (row.Fecha_Creacion_dt || '') + (row.FranjaHoraria !== 'DESCONOCIDO' ? ` (${row.FranjaHoraria})` : '');
+
+                    if (found) { found.count++; found.fechas.push(fecha); } 
+                    else { clusters.push({ lat, lng, count: 1, direccion: row.direccion_normalizada || 'Desconocida', fechas: [fecha], mes: row['Mes/Año'] }); }
+                });
+
                 if (tipoVista === 'heatmap') {
-                    let cuadricula = {};
-                    data.forEach(row => {
-                        let latStr = (row.Latitud||'').toString().replace(',', '.');
-                        let lngStr = (row.Longitud||'').toString().replace(',', '.');
-                        const lat = parseFloat(latStr); const lng = parseFloat(lngStr);
-                        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-                            let gridLat = (Math.round(lat / 0.0004) * 0.0004).toFixed(5);
-                            let gridLng = (Math.round(lng / 0.0004) * 0.0004).toFixed(5);
-                            let key = gridLat + "|" + gridLng + (esMultiMes ? "|" + row['Mes/Año'] : "");
-                            
-                            if (!cuadricula[key]) {
-                                cuadricula[key] = { lat: parseFloat(gridLat), lng: parseFloat(gridLng), count: 0, mes: row['Mes/Año'] };
-                            }
-                            cuadricula[key].count += 1;
+                    // CÍRCULOS DE CALOR NATIVOS (No colapsan nunca)
+                    clusters.forEach(c => {
+                        let colorBase = '#4AB5E0'; // Celeste exterior
+                        let colorMid = '#19567C';  // Azul medio
+                        let colorCore = '#D34872'; // Magenta núcleo
+
+                        if (esMultiMes && mesColorMap[c.mes]) {
+                            colorBase = mesColorMap[c.mes];
+                            colorMid = colorBase;
+                            colorCore = colorBase;
+                        }
+
+                        // Ajustamos el tamaño máximo para que no se hagan nubes inmensas
+                        let radiusBase = 20 + (c.count * 2.5);
+                        if(radiusBase > 70) radiusBase = 70;
+
+                        // Capa 1: Aura amplia y súper translúcida
+                        heatmapOverlays.push(new google.maps.Circle({
+                            strokeWeight: 0, fillColor: colorBase, fillOpacity: 0.1,
+                            map: map, center: {lat: c.lat, lng: c.lng}, radius: radiusBase * 2.5, clickable: false
+                        }));
+
+                        // Capa 2: Centro difuminado
+                        heatmapOverlays.push(new google.maps.Circle({
+                            strokeWeight: 0, fillColor: c.count > 3 ? colorMid : colorBase, fillOpacity: 0.2,
+                            map: map, center: {lat: c.lat, lng: c.lng}, radius: radiusBase * 1.2, clickable: false
+                        }));
+
+                        // Capa 3: Núcleo denso (solo si hay muchos accidentes agrupados)
+                        if(c.count > 1) {
+                            heatmapOverlays.push(new google.maps.Circle({
+                                strokeWeight: 0, fillColor: c.count >= 5 ? colorCore : colorMid, fillOpacity: 0.45,
+                                map: map, center: {lat: c.lat, lng: c.lng}, radius: radiusBase * 0.6, clickable: false
+                            }));
                         }
                     });
 
-                    for (let key in cuadricula) {
-                        let cell = cuadricula[key];
-                        let colorAsignado = (esMultiMes && mesColorMap[cell.mes]) ? mesColorMap[cell.mes] : null;
-                        let hm = new CSSHeatmapOverlay(new google.maps.LatLng(cell.lat, cell.lng), cell.count, map, esMultiMes, colorAsignado);
-                        heatmapOverlays.push(hm);
-                    }
-
                 } else {
-                    let clusters = [];
-                    function getDist(lat1, lon1, lat2, lon2) {
-                        const R = 6371e3; const p1 = lat1 * Math.PI/180; const p2 = lat2 * Math.PI/180;
-                        const dp = (lat2-lat1) * Math.PI/180; const dl = (lon2-lon1) * Math.PI/180;
-                        const a = Math.sin(dp/2)**2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2)**2;
-                        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
-                    }
-
-                    data.forEach(row => {
-                        let lat = parseFloat((row.Latitud||'').toString().replace(',', '.');
-                        let lng = parseFloat((row.Longitud||'').toString().replace(',', '.');
-                        if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
-                        
-                        let found = clusters.find(c => (!esMultiMes || c.mes === row['Mes/Año']) && getDist(lat, lng, c.lat, c.lng) <= 30);
-                        const fecha = (row.Fecha_Creacion_dt || '') + (row.FranjaHoraria !== 'DESCONOCIDO' ? ` (${row.FranjaHoraria})` : '');
-
-                        if (found) { found.count++; found.fechas.push(fecha); } 
-                        else { clusters.push({ lat, lng, count: 1, direccion: row.direccion_normalizada || 'Desconocida', fechas: [fecha], mes: row['Mes/Año'] }); }
-                    });
-
                     clusters.forEach(c => {
                         let colorHex = '#19567C'; 
                         if (esMultiMes && mesColorMap[c.mes]) colorHex = mesColorMap[c.mes];
@@ -496,6 +443,7 @@
                 }
             }
 
+            // CARGA DE CSV
             fetch('./seguridad_vial.csv')
                 .then(r => r.text())
                 .then(csvText => {
@@ -552,16 +500,25 @@
                     });
                 });
 
+            // Listeners de Capas
             document.querySelectorAll('input[name="tipo-visualizacion"]').forEach(r => r.addEventListener('change', procesarYMostrarIncidentes));
             document.getElementById('cb-incidentes').addEventListener('change', procesarYMostrarIncidentes);
             
+            const toggleLayer = (id, layer) => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('change', e => e.target.checked ? layer.setMap(map) : layer.setMap(null));
+            }
+            toggleLayer('cb-cgm', cgmLayer);
+            toggleLayer('cb-semaforos', semaforosLayer);
+            toggleLayer('cb-reductores', reductoresLayer);
+            toggleLayer('cb-solicitudes', solicitudesLayer);
+            toggleLayer('cb-yitos', yitosLayer);
+            toggleLayer('cb-evg', evgLayer);
+
             document.getElementById('cb-limite').addEventListener('change', e => {
                 limitePolygons.forEach(p => p.setMap(e.target.checked ? map : null));
                 limitePolylines.forEach(l => l.setMap(e.target.checked ? map : null));
             });
-
-            const toggleLayer = (id, layer) => document.getElementById(id).addEventListener('change', e => e.target.checked ? layer.setMap(map) : layer.setMap(null));
-            toggleLayer('cb-cgm', cgmLayer); toggleLayer('cb-semaforos', semaforosLayer); toggleLayer('cb-reductores', reductoresLayer);
         }
     </script>
 </body>
