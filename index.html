@@ -245,6 +245,7 @@
         let incidentDataTotal = [];
         let clusterOverlays = [];
         let heatmapLayer = null; 
+        let heatmaps = []; 
         
         let IncidentClusterOverlay; 
 
@@ -253,6 +254,11 @@
             '#19567C', '#D34872', '#4AB5E0', '#F59E0B', '#10B981', 
             '#8B5CF6', '#F97316', '#06B6D4', '#EC4899', '#14B8A6'
         ];
+
+        function hexToRgb(hex) {
+            let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : {r: 25, g: 86, b: 124};
+        }
 
         function startInfoWindowTimer() {
             if (infoWindowTimer) clearTimeout(infoWindowTimer);
@@ -404,16 +410,14 @@
             map.addListener('zoom_changed', updatePointStyles);
 
             // -----------------------------------------------------
-            // LÓGICA DE INCIDENTES CON EL DIBUJADO DE LAS "NUBES"
+            // LÓGICA DE INCIDENTES: AGRUPACIÓN SEGURA Y DIFUMINADO
             // -----------------------------------------------------
 
             function limpiarVisualizaciones() {
                 clusterOverlays.forEach(o => o.setMap(null)); 
                 clusterOverlays = [];
-                if (heatmapLayer) { 
-                    heatmapLayer.setMap(null); 
-                    heatmapLayer = null; 
-                }
+                if (heatmapLayer) { heatmapLayer.setMap(null); heatmapLayer = null; }
+                heatmaps.forEach(hm => hm.setMap(null)); heatmaps = [];
             }
 
             function procesarYMostrarIncidentes() {
@@ -434,64 +438,84 @@
                 const tipoVista = document.querySelector('input[name="tipo-visualizacion"]:checked').value;
                 const esMultiMes = !cbMeses.includes('TODOS') && cbMeses.length > 1;
 
-                if (tipoVista === 'heatmap') {
+                // Pre-Agrupación Matemática (El escudo contra el Crash de WebGL)
+                let clusters = [];
+                function getDistanceMeters(lat1, lon1, lat2, lon2) {
+                    const R = 6371e3; const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180;
+                    const Δφ = (lat2-lat1) * Math.PI/180; const Δλ = (lon2-lon1) * Math.PI/180;
+                    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+                    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
+                }
+
+                data.forEach(row => {
+                    let latStr = (row.Latitud||'').toString().replace(',', '.');
+                    let lngStr = (row.Longitud||'').toString().replace(',', '.');
+                    const lat = parseFloat(latStr); const lng = parseFloat(lngStr);
+                    if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
                     
+                    let found = clusters.find(c => (!esMultiMes || c.mes === row['Mes/Año']) && getDistanceMeters(lat, lng, c.lat, c.lng) <= 30);
+                    const fecha = (row.Fecha_Creacion_dt || '') + (row.FranjaHoraria !== 'DESCONOCIDO' ? ` (${row.FranjaHoraria})` : '');
+
+                    if (found) { found.count++; found.fechas.push(fecha); } 
+                    else { clusters.push({ lat: lat, lng: lng, count: 1, direccion: row.direccion_normalizada || 'Desconocida', fechas: [fecha], mes: row['Mes/Año'] }); }
+                });
+
+                if (tipoVista === 'heatmap') {
                     try {
-                        let heatmapData = [];
-                        data.forEach(r => {
-                            let latStr = (r.Latitud||'').toString().replace(',', '.');
-                            let lngStr = (r.Longitud||'').toString().replace(',', '.');
-                            let lat = parseFloat(latStr);
-                            let lng = parseFloat(lngStr);
+                        if (esMultiMes) {
+                            cbMeses.forEach(mes => {
+                                const rgb = hexToRgb(mesColorMap[mes] || '#19567C');
+                                
+                                // Envío de Puntos Ponderados (Weight)
+                                const puntosPonderados = clusters.filter(c => c.mes === mes).map(c => {
+                                    return { location: new google.maps.LatLng(c.lat, c.lng), weight: c.count };
+                                });
 
-                            if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-                                heatmapData.push(new google.maps.LatLng(lat, lng));
-                            }
-                        });
-
-                        if (heatmapData.length > 0) {
-                            heatmapLayer = new google.maps.visualization.HeatmapLayer({
-                                data: heatmapData,
-                                map: map,
-                                // Estos dos parámetros son los responsables de las nubes anchas y suaves
-                                radius: 75, // <--- Radio mucho mayor para difuminar en áreas amplias
-                                maxIntensity: 15, // <--- Regula la opacidad permitiendo que el color sangre
-                                opacity: 0.85,
-                                gradient: [
-                                    'rgba(0, 0, 0, 0)',
-                                    'rgba(74, 181, 224, 0.2)', // Celeste pálido (Bordes)
-                                    'rgba(74, 181, 224, 0.6)', // Celeste sólido
-                                    'rgba(25, 86, 124, 0.8)',  // Azul Institucional
-                                    'rgba(211, 72, 114, 1)'    // Magenta (Núcleo crítico)
-                                ]
+                                if (puntosPonderados.length > 0) {
+                                    const capa = new google.maps.visualization.HeatmapLayer({
+                                        data: puntosPonderados,
+                                        map: map,
+                                        radius: 30, // Calibrado a difuminado QGIS
+                                        maxIntensity: 10,
+                                        opacity: 0.9,
+                                        gradient: [
+                                            'rgba(0, 0, 0, 0)',
+                                            `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`,
+                                            `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.7)`,
+                                            `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`
+                                        ]
+                                    });
+                                    heatmaps.push(capa);
+                                }
                             });
+                        } else {
+                            
+                            const puntosPonderados = clusters.map(c => {
+                                return { location: new google.maps.LatLng(c.lat, c.lng), weight: c.count };
+                            });
+
+                            if (puntosPonderados.length > 0) {
+                                heatmapLayer = new google.maps.visualization.HeatmapLayer({
+                                    data: puntosPonderados,
+                                    map: map,
+                                    radius: 30, // <-- Ajustado para crear el aura sin tapar todo Lomas
+                                    maxIntensity: 10, // <-- Alcanza el color magenta de forma suave
+                                    opacity: 0.9,
+                                    gradient: [
+                                        'rgba(0, 0, 0, 0)',
+                                        'rgba(74, 181, 224, 0)',   
+                                        'rgba(74, 181, 224, 0.7)', 
+                                        'rgba(25, 86, 124, 0.9)',  
+                                        'rgba(211, 72, 114, 1)'    
+                                    ]
+                                });
+                            }
                         }
                     } catch (error) {
                         console.error(error);
                     }
 
                 } else {
-                    let clusters = [];
-                    function getDistanceMeters(lat1, lon1, lat2, lon2) {
-                        const R = 6371e3; const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180;
-                        const Δφ = (lat2-lat1) * Math.PI/180; const Δλ = (lon2-lon1) * Math.PI/180;
-                        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-                        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
-                    }
-
-                    data.forEach(row => {
-                        let latStr = (row.Latitud||'').toString().replace(',', '.');
-                        let lngStr = (row.Longitud||'').toString().replace(',', '.');
-                        const lat = parseFloat(latStr); const lng = parseFloat(lngStr);
-                        if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
-                        
-                        let found = clusters.find(c => (!esMultiMes || c.mes === row['Mes/Año']) && getDistanceMeters(lat, lng, c.lat, c.lng) <= 30);
-                        const fecha = (row.Fecha_Creacion_dt || '') + (row.FranjaHoraria !== 'DESCONOCIDO' ? ` (${row.FranjaHoraria})` : '');
-
-                        if (found) { found.count++; found.fechas.push(fecha); } 
-                        else { clusters.push({ lat: lat, lng: lng, count: 1, direccion: row.direccion_normalizada || 'Desconocida', fechas: [fecha], mes: row['Mes/Año'] }); }
-                    });
-
                     clusters.forEach(c => {
                         let colorHex = '#19567C'; 
                         if (esMultiMes && mesColorMap[c.mes]) colorHex = mesColorMap[c.mes];
