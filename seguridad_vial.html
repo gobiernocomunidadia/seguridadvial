@@ -164,21 +164,50 @@
                             <span class="text-sm text-[#0F172A] font-bold">Mapa de Incidentes</span>
                         </label>
                         
+                        <!-- Selector de Tipo de Visualización -->
                         <div class="flex gap-4 mt-1 pl-7 text-xs font-bold text-gray-700">
                             <label class="flex items-center gap-1 cursor-pointer">
                                 <input type="radio" name="tipo-visualizacion" value="puntos" checked class="accent-[#19567C]"> Puntos
                             </label>
                             <label class="flex items-center gap-1 cursor-pointer">
-                                <input type="radio" name="tipo-visualizacion" value="heatmap" class="accent-[#19567C]"> Mapa de Calor
+                                <input type="radio" name="tipo-visualizacion" value="heatmap" class="accent-[#19567C]"> Heatmap
                             </label>
                         </div>
 
+                        <!-- Filtro de Mes/Año Multiselección -->
                         <div class="flex flex-col gap-1 mt-2 pl-7">
                             <label class="text-xs font-semibold text-gray-600">Filtrar por Mes/Año:</label>
-                            <div id="container-mes-ano" class="custom-scrollbar max-h-36 overflow-y-auto bg-white border border-gray-300 rounded p-2 space-y-1.5 text-xs text-[#0F172A]">
+                            <div id="container-mes-ano" class="custom-scrollbar max-h-32 overflow-y-auto bg-white border border-gray-300 rounded p-2 space-y-1.5 text-xs text-[#0F172A]">
                                 <label class="flex items-center gap-2 cursor-pointer font-bold border-b pb-1 mb-1">
                                     <input type="checkbox" value="TODOS" id="cb-mes-todos" checked class="cb-mes-ano w-3.5 h-3.5 accent-[#19567C]">
                                     <span>Todos los meses</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- NUEVO: Filtro por Horario -->
+                        <div class="flex flex-col gap-1 mt-3 pl-7">
+                            <label class="text-xs font-semibold text-gray-600">Filtrar por Horario:</label>
+                            <div id="container-horario" class="custom-scrollbar bg-white border border-gray-300 rounded p-2 space-y-1.5 text-xs text-[#0F172A]">
+                                <label class="flex items-center gap-2 cursor-pointer font-bold border-b pb-1 mb-1">
+                                    <input type="checkbox" value="TODOS" id="cb-horario-todos" checked class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
+                                    <span>Todos los horarios</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer font-medium">
+                                    <input type="checkbox" value="MADRUGADA" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
+                                    <span>Madrugada <span class="text-gray-400 text-[10px]">(0 a 6 hs)</span></span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer font-medium">
+                                    <input type="checkbox" value="MAÑANA" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
+                                    <span>Mañana <span class="text-gray-400 text-[10px]">(6 a 12 hs)</span></span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer font-medium">
+                                    <input type="checkbox" value="TARDE" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
+                                    <span>Tarde <span class="text-gray-400 text-[10px]">(12 a 18 hs)</span></span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer font-medium">
+                                    <input type="checkbox" value="NOCHE" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
+                                    <span>Noche <span class="text-gray-400 text-[10px]">(18 a 24 hs)</span></span>
                                 </label>
                             </div>
                         </div>
@@ -272,15 +301,16 @@
 
     </main>
 
+    <!-- Se añade la librería 'visualization' en la URL del API de Google Maps -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2MHti5Cy4IDKPc3Iu0ypNQg_BgsjcMoQ&libraries=visualization&callback=initMap" defer></script>
 
     <script>
         let map, trafficLayer, infoWindow;
         let infoWindowTimer; // Temporizador global para el cierre automático
         let cgmLayer, semaforosLayer, reductoresLayer, solicitudesLayer;
-        let yitosLayer, evgLayer, autobusesLayer; // Capas de colectivos municipales
-        let provincialesLayer, nacionalesLayer; // Capas de colectivos provinciales/nacionales
-        let limiteElements = []; // Array para almacenar Polygons/Polylines del límite punteado
+        let yitosLayer, evgLayer, autobusesLayer; 
+        let provincialesLayer, nacionalesLayer; 
+        let limiteElements = []; 
         
         // Variables para Incidentes
         let incidentDataTotal = [];
@@ -303,7 +333,6 @@
             }, 10000); // 10 segundos
         }
 
-        // --- FUNCIÓN GLOBAL PARA EL BOTÓN MANUAL DE CIERRE ---
         window.closeInfoWindow = function() {
             if (infoWindow) {
                 infoWindow.close();
@@ -317,15 +346,12 @@
             lucide.createIcons();
             infoWindow = new google.maps.InfoWindow();
             
-            // --- EVENTOS PARA PAUSAR EL TEMPORIZADOR POR INACTIVIDAD ---
             google.maps.event.addListener(infoWindow, 'domready', () => {
                 const iwContainer = document.querySelector('.gm-style-iw-c');
                 if (iwContainer) {
-                    // Si el usuario pasa el mouse, pausamos el contador
                     iwContainer.addEventListener('mouseenter', () => {
                         if (infoWindowTimer) clearTimeout(infoWindowTimer);
                     });
-                    // Si el usuario saca el mouse, reiniciamos los 10 segundos
                     iwContainer.addEventListener('mouseleave', () => {
                         startInfoWindowTimer();
                     });
@@ -349,9 +375,9 @@
                 zoom: 13,
                 styles: mapStyle,
                 mapTypeControl: false,
-                streetViewControl: false, // Inicia desactivado
+                streetViewControl: false, 
                 streetViewControlOptions: {
-                    position: google.maps.ControlPosition.RIGHT_BOTTOM // Posición cómoda
+                    position: google.maps.ControlPosition.RIGHT_BOTTOM 
                 }
             });
 
@@ -365,7 +391,7 @@
                     this.count = count;
                     this.address = address;
                     this.fechas = fechas || []; 
-                    this.color = color || '#19567C'; // Color personalizado por parámetro
+                    this.color = color || '#19567C'; 
                     this.div = null;
                     this.setMap(mapInstance);
                 }
@@ -374,7 +400,6 @@
                     this.div.style.position = 'absolute';
                     
                     if (this.count === 1) {
-                        // Para puntos individuales: SVG con icono de alerta/triangulo
                         this.div.className = 'incident-single';
                         const iconAlert = '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="9" x2="12" y2="13" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>';
                         this.div.innerHTML = `
@@ -386,7 +411,6 @@
                             </svg>
                         `;
                     } else {
-                        // Para clusters (>1): con número y latido opcional.
                         this.div.className = 'incident-cluster';
                         this.div.style.backgroundColor = this.color;
                         if (this.count > 5) this.div.classList.add('pulse-cluster');
@@ -422,7 +446,7 @@
                         infoWindow.setContent(content);
                         infoWindow.setPosition(this.position);
                         infoWindow.open(this.getMap());
-                        startInfoWindowTimer(); // Iniciar cuenta regresiva al abrir
+                        startInfoWindowTimer(); 
                     });
 
                     const panes = this.getPanes();
@@ -434,7 +458,6 @@
                     const pos = overlayProjection.fromLatLngToDivPixel(this.position);
                     
                     if (this.count === 1) {
-                        // Cambiamos tamaño baseado en el zoom igual que getSvgIcon
                         const zoom = this.getMap().getZoom();
                         let size = 10;   
                         if (zoom >= 15) { size = 20; }       
@@ -445,7 +468,6 @@
                         this.div.style.left = (pos.x - size/2) + 'px';
                         this.div.style.top = (pos.y - size/2) + 'px';
                     } else {
-                        // Centrar el cluster de 24px
                         this.div.style.left = (pos.x - 12) + 'px';
                         this.div.style.top = (pos.y - 12) + 'px';
                     }
@@ -461,8 +483,6 @@
             // -----------------------------------------------------
             // CARGA DE CAPAS
             // -----------------------------------------------------
-            
-            // 1. Límite Lomas (Línea Punteada)
             fetch('./municipios_Lomas de Zamora.geojson').then(r => r.json()).then(geoJson => {
                 geoJson.features.forEach(feature => {
                     if (feature.geometry.type === 'MultiPolygon' || feature.geometry.type === 'Polygon') {
@@ -480,12 +500,10 @@
                 });
             }).catch(e => console.log('Error cargando límite:', e));
 
-            // 2. Cargar CGM GeoJSON para Polígonos y Llenar Filtro Global
             cgmLayer = new google.maps.Data();
             fetch('./CGM.geojson').then(r => r.json()).then(geoJson => {
                 cgmLayer.addGeoJson(geoJson);
                 
-                // Llenar Filtro Global
                 const cgmSet = new Set();
                 geoJson.features.forEach(f => {
                     if (f.properties && f.properties.CGM) cgmSet.add(f.properties.CGM.toUpperCase());
@@ -499,13 +517,12 @@
                     selectGlobalCgm.appendChild(opt);
                 });
                 
-                // Disparar filtros
                 selectGlobalCgm.addEventListener('change', () => {
                     updatePointStyles();
                     procesarYMostrarIncidentes();
                 });
 
-                updatePointStyles(); // Aplicar estilos iniciales
+                updatePointStyles(); 
             }).catch(e => console.log('Error cargando CGM:', e));
 
             cgmLayer.setMap(map);
@@ -514,14 +531,12 @@
             reductoresLayer = new google.maps.Data(); reductoresLayer.loadGeoJson('./Reductores de Velocidad.geojson');
             solicitudesLayer = new google.maps.Data(); solicitudesLayer.loadGeoJson('./Solicitudes Semaforos 2026.geojson');
 
-            // Capas de Colectivos
             yitosLayer = new google.maps.Data(); yitosLayer.loadGeoJson('./Recorridos Yitos.geojson');
             evgLayer = new google.maps.Data(); evgLayer.loadGeoJson('./Recorridos EVG.geojson');
             autobusesLayer = new google.maps.Data(); autobusesLayer.loadGeoJson('./Recorridos Autobuses.geojson');
             provincialesLayer = new google.maps.Data(); provincialesLayer.loadGeoJson('./Recorridos Provinciales.geojson');
             nacionalesLayer = new google.maps.Data(); nacionalesLayer.loadGeoJson('./Recorridos Nacionales.geojson');
 
-            // SVG Dinámicos para Infraestructura
             const pathSemaforo = '<rect x="7" y="2" width="10" height="20" rx="3"/><circle cx="12" cy="7" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="17" r="1.5"/>';
             const pathReductor = '<path d="m20.9 18.55-8-15.98a1 1 0 0 0-1.8 0l-8 15.98"/><path d="M4.34 10a11.24 11.24 0 0 1 15.32 0"/><path d="M8.64 14.5a5.42 5.42 0 0 1 6.72 0"/><path d="M2 22h20"/>';
             const pathSolicitud = '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15h6"/>';
@@ -654,7 +669,7 @@
             trafficLayer = new google.maps.TrafficLayer();
 
             // -----------------------------------------------------
-            // LÓGICA DE INCIDENTES (PUNTOS DIFERENCIADOS / HEATMAP)
+            // LÓGICA DE INCIDENTES (FILTROS Y HEATMAP)
             // -----------------------------------------------------
 
             function getDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -682,20 +697,32 @@
                 
                 if (!document.getElementById('cb-incidentes').checked) return;
 
-                // Capturar meses seleccionados desde los checkboxes
-                const checkboxes = document.querySelectorAll('.cb-mes-ano:checked');
-                let mesesSeleccionados = Array.from(checkboxes).map(cb => cb.value);
-                const esTodos = mesesSeleccionados.includes('TODOS') || mesesSeleccionados.length === 0;
+                // Capturar meses seleccionados 
+                const checkboxesMeses = document.querySelectorAll('.cb-mes-ano:checked');
+                let mesesSeleccionados = Array.from(checkboxesMeses).map(cb => cb.value);
+                const esTodosMeses = mesesSeleccionados.includes('TODOS') || mesesSeleccionados.length === 0;
+
+                // Capturar horarios seleccionados
+                const checkboxesHorario = document.querySelectorAll('.cb-horario:checked');
+                let horariosSeleccionados = Array.from(checkboxesHorario).map(cb => cb.value);
+                const esTodosHorarios = horariosSeleccionados.includes('TODOS') || horariosSeleccionados.length === 0;
 
                 const globalCgmSelect = document.getElementById('filtro-global-cgm');
                 const globalCgm = globalCgmSelect ? globalCgmSelect.value : "TODOS";
 
                 let dataFiltrada = incidentDataTotal;
                 
-                if (!esTodos) {
+                // Filtro por Mes
+                if (!esTodosMeses) {
                     dataFiltrada = dataFiltrada.filter(d => mesesSeleccionados.includes(d['Mes/Año']));
                 }
 
+                // Filtro por Horario
+                if (!esTodosHorarios) {
+                    dataFiltrada = dataFiltrada.filter(d => horariosSeleccionados.includes(d['FranjaHoraria']));
+                }
+
+                // Filtro por CGM
                 if (globalCgm !== "TODOS") {
                     dataFiltrada = dataFiltrada.filter(d => {
                         const rowCgm = d['CGM'] || "";
@@ -703,12 +730,10 @@
                     });
                 }
 
-                // Determinar el tipo de visualización activo (Puntos o Heatmap)
                 const tipoVisualizacion = document.querySelector('input[name="tipo-visualizacion"]:checked').value;
-                const esMultiMes = !esTodos && mesesSeleccionados.length > 1;
+                const esMultiMes = !esTodosMeses && mesesSeleccionados.length > 1;
 
                 if (tipoVisualizacion === 'heatmap') {
-                    // Generar Mapa de Calor
                     const heatmapData = dataFiltrada.map(row => {
                         const lat = parseFloat(row.Latitud);
                         const lng = parseFloat(row.Longitud);
@@ -721,16 +746,15 @@
                         map: map,
                         radius: 30,
                         gradient: [
-                            'rgba(74, 181, 224, 0)',    // Transparente Celeste (--acento)
-                            'rgba(74, 181, 224, 0.6)',  // Celeste bajo
-                            'rgba(25, 86, 124, 0.8)',   // Azul Institucional (--bg-main)
-                            'rgba(211, 72, 114, 0.9)',  // Magenta (--magenta) por intensidad
-                            'rgba(211, 72, 114, 1.0)'   // Magenta puro crítico
+                            'rgba(74, 181, 224, 0)',    
+                            'rgba(74, 181, 224, 0.6)',  
+                            'rgba(25, 86, 124, 0.8)',   
+                            'rgba(211, 72, 114, 0.9)',  
+                            'rgba(211, 72, 114, 1.0)'   
                         ]
                     });
 
                 } else {
-                    // Generar Clústeres/Puntos individuales tradicionales
                     let clusters = [];
 
                     dataFiltrada.forEach(row => {
@@ -740,7 +764,6 @@
 
                         let foundCluster = null;
                         for (let c of clusters) {
-                            // Si hay multiselección activa, se separan los puntos por mes para reflejar su color independiente
                             const mismoMes = !esMultiMes || c.mes === row['Mes/Año'];
                             if (mismoMes && getDistanceMeters(lat, lng, c.lat, c.lng) <= 30) {
                                 foundCluster = c;
@@ -748,7 +771,9 @@
                             }
                         }
 
-                        const fecha = row.Fecha_Creacion_dt || 'Fecha desconocida';
+                        // Mostrar también la franja en el popup si está disponible
+                        const detalleFranja = row.FranjaHoraria !== 'DESCONOCIDO' ? `(${row.FranjaHoraria})` : '';
+                        const fecha = (row.Fecha_Creacion_dt || 'Fecha desconocida') + ' ' + detalleFranja;
 
                         if (foundCluster) {
                             foundCluster.count++;
@@ -766,7 +791,7 @@
                     });
 
                     clusters.forEach(c => {
-                        let colorHex = '#19567C'; // Por defecto azul institucional
+                        let colorHex = '#19567C'; 
                         if (esMultiMes && mesColorMap[c.mes]) {
                             colorHex = mesColorMap[c.mes];
                         }
@@ -809,6 +834,24 @@
                                     }
                                 }
 
+                                // LÓGICA PARA ASIGNAR FRANJA HORARIA
+                                if (r['Hora']) {
+                                    const timeParts = r['Hora'].split(':');
+                                    if (timeParts.length >= 1) {
+                                        const hour = parseInt(timeParts[0], 10);
+                                        if (!isNaN(hour)) {
+                                            if (hour >= 0 && hour < 6) r['FranjaHoraria'] = 'MADRUGADA';
+                                            else if (hour >= 6 && hour < 12) r['FranjaHoraria'] = 'MAÑANA';
+                                            else if (hour >= 12 && hour < 18) r['FranjaHoraria'] = 'TARDE';
+                                            else if (hour >= 18 && hour <= 24) r['FranjaHoraria'] = 'NOCHE';
+                                        } else {
+                                            r['FranjaHoraria'] = 'DESCONOCIDO';
+                                        }
+                                    }
+                                } else {
+                                    r['FranjaHoraria'] = 'DESCONOCIDO';
+                                }
+
                                 let dir = "";
                                 if (r['Calle']) dir += r['Calle'];
                                 if (r['Altura'] && r['Altura'] !== '0') dir += " " + r['Altura'];
@@ -818,15 +861,14 @@
                                 r['Fecha_Creacion_dt'] = (r['Fecha'] || '') + ' ' + (r['Hora'] || '');
                             });
                             
+                            // Renderizado dinámico del filtro de Meses
                             const containerMesAno = document.getElementById('container-mes-ano');
                             const mesesArray = Array.from(mesesSet).sort();
 
-                            // Asignación estática de la paleta diferenciadora a los meses indexados
                             mesesArray.forEach((mes, idx) => {
                                 mesColorMap[mes] = coloresDisponibles[idx % coloresDisponibles.length];
                             });
 
-                            // Construcción dinámica del checklist
                             mesesArray.forEach(mes => {
                                 const lbl = document.createElement('label');
                                 lbl.className = 'flex items-center gap-2 cursor-pointer font-medium';
@@ -838,7 +880,7 @@
                                 containerMesAno.appendChild(lbl);
                             });
 
-                            // Eventos cruzados para limpiar "Todos los meses" o desmarcar individuales según corresponda
+                            // Eventos cruzados para Checkboxes de Meses
                             containerMesAno.addEventListener('change', (e) => {
                                 if (e.target.id === 'cb-mes-todos' && e.target.checked) {
                                     document.querySelectorAll('.cb-mes-ano:not(#cb-mes-todos)').forEach(cb => cb.checked = false);
@@ -852,6 +894,20 @@
                     });
                 })
                 .catch(e => console.log("Error cargando CSV:", e));
+
+            // --- EVENTOS CHECKBOXES HORARIO ---
+            const containerHorario = document.getElementById('container-horario');
+            if(containerHorario) {
+                containerHorario.addEventListener('change', (e) => {
+                    if (e.target.id === 'cb-horario-todos' && e.target.checked) {
+                        document.querySelectorAll('.cb-horario:not(#cb-horario-todos)').forEach(cb => cb.checked = false);
+                    } else if (e.target.classList.contains('cb-horario') && e.target.id !== 'cb-horario-todos' && e.target.checked) {
+                        const todosCb = document.getElementById('cb-horario-todos');
+                        if (todosCb) todosCb.checked = false;
+                    }
+                    procesarYMostrarIncidentes();
+                });
+            }
 
 
             // --- CHECKBOXES TOGGLES ---
@@ -879,14 +935,12 @@
 
             toggleLayer('cb-trafico', trafficLayer);
             
-            // LOGICA PARA HABILITAR PEGMAN
             document.getElementById('cb-streetview').addEventListener('change', (e) => {
                 map.setOptions({ streetViewControl: e.target.checked });
             });
 
             document.getElementById('cb-incidentes').addEventListener('change', procesarYMostrarIncidentes);
 
-            // Escuchar cambios en los selectores de visualización (Radio Buttons)
             document.querySelectorAll('input[name="tipo-visualizacion"]').forEach(radio => {
                 radio.addEventListener('change', procesarYMostrarIncidentes);
             });
