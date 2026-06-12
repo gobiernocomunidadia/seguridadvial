@@ -135,19 +135,19 @@
                                 </label>
                                 <label class="flex items-center gap-2 cursor-pointer font-medium">
                                     <input type="checkbox" value="MADRUGADA" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
-                                    <span>Madrugada <span class="text-gray-400 text-[10px]">(0 a 6 hs)</span></span>
+                                    <span>Madrugada</span>
                                 </label>
                                 <label class="flex items-center gap-2 cursor-pointer font-medium">
                                     <input type="checkbox" value="MAÑANA" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
-                                    <span>Mañana <span class="text-gray-400 text-[10px]">(6 a 12 hs)</span></span>
+                                    <span>Mañana</span>
                                 </label>
                                 <label class="flex items-center gap-2 cursor-pointer font-medium">
                                     <input type="checkbox" value="TARDE" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
-                                    <span>Tarde <span class="text-gray-400 text-[10px]">(12 a 18 hs)</span></span>
+                                    <span>Tarde</span>
                                 </label>
                                 <label class="flex items-center gap-2 cursor-pointer font-medium">
                                     <input type="checkbox" value="NOCHE" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
-                                    <span>Noche <span class="text-gray-400 text-[10px]">(18 a 24 hs)</span></span>
+                                    <span>Noche</span>
                                 </label>
                             </div>
                         </div>
@@ -170,6 +170,22 @@
                     </div>
                 </div>
 
+                <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
+                    <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-1 flex items-center gap-2">
+                        <i data-lucide="bus" class="h-4 w-4"></i> Colectivos
+                    </h4>
+                    <div class="space-y-3 mb-4">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-yitos" class="w-4 h-4 accent-[#19567C]">
+                            <span class="text-sm text-[#0F172A] font-bold">Empresa Yitos</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-evg" class="w-4 h-4 accent-[#19567C]">
+                            <span class="text-sm text-[#0F172A] font-bold">Empresa EVG</span>
+                        </label>
+                    </div>
+                </div>
+
             </div>
         </aside>
 
@@ -178,11 +194,11 @@
         </div>
     </main>
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2MHti5Cy4IDKPc3Iu0ypNQg_BgsjcMoQ&libraries=visualization&v=weekly&callback=initMap" defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2MHti5Cy4IDKPc3Iu0ypNQg_BgsjcMoQ&libraries=visualization&v=3.64&callback=initMap" async defer></script>
 
     <script>
         let map, infoWindow, infoWindowTimer; 
-        let cgmLayer, semaforosLayer, reductoresLayer; 
+        let cgmLayer, semaforosLayer, reductoresLayer, yitosLayer, evgLayer; 
         let limitePolygons = []; 
         let limitePolylines = [];
         
@@ -220,7 +236,9 @@
                 { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
                 { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
                 { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-                { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] }
+                { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
+                { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9e8f5" }] },
+                { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] }
             ];
 
             map = new google.maps.Map(document.getElementById("map"), {
@@ -251,12 +269,7 @@
                     }
                     this.div.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        const fechasList = this.fechas.map(f => `<li style="margin-bottom: 2px;">${f}</li>`).join('');
-                        const fechasHtml = `<div style="margin-top: 10px;"><p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 700; color: #19567C;">Fechas Registradas:</p><div class="custom-scrollbar" style="max-height: 80px; overflow-y: auto; background-color: #F3F6F9; border-radius: 4px; padding: 4px 8px; border: 1px solid #E6EDF3;"><ul style="margin: 0; padding-left: 12px; color: #475569; font-size: 11px;">${fechasList}</ul></div></div>`;
-                        const content = `<div style="font-family: 'Montserrat', sans-serif; min-width: 220px; position: relative;"><button onclick="window.closeInfoWindow()" class="custom-close-btn">&times;</button><h3 style="font-weight: 800; font-size: 14px; color: #19567C; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">Zona de Incidentes</h3><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Dirección:</b> ${this.address}</p><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Total:</b> ${this.count}</p>${fechasHtml}</div>`;
-                        infoWindow.setContent(content);
-                        infoWindow.setPosition(this.position);
-                        infoWindow.open(map);
+                        mostrarPopupIncidente(this.position, this.address, this.count, this.fechas);
                     });
                     const panes = this.getPanes();
                     panes.overlayMouseTarget.appendChild(this.div);
@@ -271,13 +284,23 @@
                 onRemove() { if (this.div) { this.div.parentNode.removeChild(this.div); this.div = null; } }
             };
 
+            function mostrarPopupIncidente(position, address, count, fechas) {
+                const fechasList = fechas.map(f => `<li style="margin-bottom: 2px;">${f}</li>`).join('');
+                const fechasHtml = `<div style="margin-top: 10px;"><p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 700; color: #19567C;">Fechas Registradas:</p><div class="custom-scrollbar" style="max-height: 80px; overflow-y: auto; background-color: #F3F6F9; border-radius: 4px; padding: 4px 8px; border: 1px solid #E6EDF3;"><ul style="margin: 0; padding-left: 12px; color: #475569; font-size: 11px;">${fechasList}</ul></div></div>`;
+                const content = `<div style="font-family: 'Montserrat', sans-serif; min-width: 220px; position: relative;"><button onclick="window.closeInfoWindow()" class="custom-close-btn">&times;</button><h3 style="font-weight: 800; font-size: 14px; color: #19567C; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">Zona de Incidentes</h3><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Dirección:</b> ${address}</p><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Total:</b> ${count}</p>${fechasHtml}</div>`;
+                infoWindow.setContent(content);
+                infoWindow.setPosition(position);
+                infoWindow.open(map);
+                startInfoWindowTimer(); 
+            }
+
             fetch('./municipios_Lomas de Zamora.geojson').then(r => r.json()).then(geoJson => {
                 geoJson.features.forEach(feature => {
                     const polys = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
                     polys.forEach(poly => poly.forEach(ring => {
                         const path = ring.map(coord => ({ lat: coord[1], lng: coord[0] }));
-                        const p = new google.maps.Polygon({ paths: path, strokeOpacity: 0, fillColor: '#19567C', fillOpacity: 0.05, map: map });
-                        const l = new google.maps.Polyline({ path: path, strokeOpacity: 0, icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 }, offset: '0', repeat: '15px' }], strokeColor: '#19567C', strokeWeight: 3, map: map });
+                        const p = new google.maps.Polygon({ paths: path, strokeOpacity: 0, fillColor: '#19567C', fillOpacity: 0.05, map: map, zIndex: 0 });
+                        const l = new google.maps.Polyline({ path: path, strokeOpacity: 0, icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 }, offset: '0', repeat: '15px' }], strokeColor: '#19567C', strokeWeight: 3, map: map, zIndex: 1 });
                         limitePolygons.push(p);
                         limitePolylines.push(l);
                     }));
@@ -318,13 +341,13 @@
                 cgmLayer.setStyle(f => {
                     const cgm = (f.getProperty('CGM')||"").toUpperCase();
                     const visible = sel==="TODOS" || cgm === sel;
-                    return { fillColor: '#4AB5E0', fillOpacity: opacidadFondo, strokeColor: '#19567C', strokeWeight: 2, visible: visible };
+                    return { fillColor: '#4AB5E0', fillOpacity: opacidadFondo, strokeColor: '#19567C', strokeWeight: 2, visible: visible, zIndex: 0 };
                 });
                 limitePolygons.forEach(p => p.setOptions({ fillOpacity: opacidadFondo }));
             }
 
             // -----------------------------------------------------
-            // LÓGICA DE INCIDENTES Y RENDERIZADO VISUAL
+            // LÓGICA DE INCIDENTES Y HEATMAP
             // -----------------------------------------------------
             function limpiarVisualizaciones() {
                 clusterOverlays.forEach(o => o.setMap(null)); 
@@ -353,7 +376,7 @@
                 const esMultiMes = !cbMeses.includes('TODOS') && cbMeses.length > 1;
 
                 if (tipoVista === 'heatmap') {
-                    // AGRUPAMOS DATOS PARA EVITAR ERRORES DE WEBGL
+                    
                     let coordsDict = {};
                     data.forEach(r => {
                         let latStr = (r.Latitud||'').toString().replace(',', '.');
@@ -387,8 +410,8 @@
                                 const capa = new google.maps.visualization.HeatmapLayer({
                                     data: heatmapData,
                                     map: map,
-                                    radius: 65, // AUMENTADO DRÁSTICAMENTE PARA EFECTO NUBE
-                                    maxIntensity: 4, // BAJADO PARA SANGRAR COLOR FÁCILMENTE
+                                    radius: 40,
+                                    maxIntensity: 6,
                                     gradient: [
                                         'rgba(0, 0, 0, 0)',
                                         `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`,
@@ -412,14 +435,14 @@
                             heatmapLayer = new google.maps.visualization.HeatmapLayer({
                                 data: heatmapData,
                                 map: map,
-                                radius: 65, // AUMENTADO DRÁSTICAMENTE PARA EFECTO NUBE
-                                maxIntensity: 4, // BAJADO PARA SANGRAR COLOR FÁCILMENTE
+                                radius: 40, 
+                                maxIntensity: 6, 
                                 gradient: [
                                     'rgba(0, 0, 0, 0)',
                                     'rgba(74, 181, 224, 0)',
-                                    'rgba(74, 181, 224, 0.6)', // Celeste expansivo
-                                    'rgba(25, 86, 124, 0.9)',  // Azul 
-                                    'rgba(211, 72, 114, 1)'    // Magenta concentrado
+                                    'rgba(74, 181, 224, 0.6)', 
+                                    'rgba(25, 86, 124, 0.9)',  
+                                    'rgba(211, 72, 114, 1)'    
                                 ]
                             });
                         }
@@ -435,8 +458,8 @@
                     }
 
                     data.forEach(row => {
-                        let lat = parseFloat((row.Latitud||'').toString().replace(',', '.'));
-                        let lng = parseFloat((row.Longitud||'').toString().replace(',', '.'));
+                        let lat = parseFloat((row.Latitud||'').toString().replace(',', '.');
+                        let lng = parseFloat((row.Longitud||'').toString().replace(',', '.');
                         if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
                         
                         let found = clusters.find(c => (!esMultiMes || c.mes === row['Mes/Año']) && getDist(lat, lng, c.lat, c.lng) <= 30);
