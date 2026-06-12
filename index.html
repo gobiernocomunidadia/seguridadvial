@@ -167,26 +167,6 @@
                             <input type="checkbox" id="cb-reductores" class="w-4 h-4 accent-[#19567C]">
                             <span class="text-sm text-[#0F172A] font-bold">Reductores de Velocidad</span>
                         </label>
-                        <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" id="cb-solicitudes" class="w-4 h-4 accent-[#19567C]">
-                            <span class="text-sm text-[#0F172A] font-bold">Solicitudes Semáforos 2026</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
-                    <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-1 flex items-center gap-2">
-                        <i data-lucide="bus" class="h-4 w-4"></i> Colectivos
-                    </h4>
-                    <div class="space-y-3 mb-4">
-                        <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" id="cb-yitos" class="w-4 h-4 accent-[#19567C]">
-                            <span class="text-sm text-[#0F172A] font-bold">Empresa Yitos</span>
-                        </label>
-                        <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" id="cb-evg" class="w-4 h-4 accent-[#19567C]">
-                            <span class="text-sm text-[#0F172A] font-bold">Empresa EVG</span>
-                        </label>
                     </div>
                 </div>
 
@@ -202,20 +182,32 @@
 
     <script>
         let map, infoWindow, infoWindowTimer; 
-        let cgmLayer, semaforosLayer, reductoresLayer, solicitudesLayer, yitosLayer, evgLayer; 
+        let cgmLayer, semaforosLayer, reductoresLayer; 
         let limitePolygons = []; 
         let limitePolylines = [];
         
         let incidentDataTotal = [];
         let clusterOverlays = [];
         let heatmapLayer = null; 
+        let heatmapsMulti = []; 
         
         let IncidentClusterOverlay; 
         let mesColorMap = {};
         const coloresDisponibles = ['#19567C', '#D34872', '#4AB5E0', '#F59E0B', '#10B981', '#8B5CF6'];
 
+        function hexToRgb(hex) {
+            let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : {r: 25, g: 86, b: 124};
+        }
+
+        function startInfoWindowTimer() {
+            if (infoWindowTimer) clearTimeout(infoWindowTimer);
+            infoWindowTimer = setTimeout(() => { if (infoWindow) infoWindow.close(); }, 10000); 
+        }
+
         window.closeInfoWindow = function() {
             if (infoWindow) infoWindow.close();
+            if (infoWindowTimer) clearTimeout(infoWindowTimer);
         };
 
         function initMap() {
@@ -331,13 +323,19 @@
                 limitePolygons.forEach(p => p.setOptions({ fillOpacity: opacidadFondo }));
             }
 
-            function procesarYMostrarIncidentes() {
-                actualizarVisibilidadCapasBase();
-
+            // -----------------------------------------------------
+            // LÓGICA DE INCIDENTES Y RENDERIZADO VISUAL
+            // -----------------------------------------------------
+            function limpiarVisualizaciones() {
                 clusterOverlays.forEach(o => o.setMap(null)); 
                 clusterOverlays = [];
                 if (heatmapLayer) { heatmapLayer.setMap(null); heatmapLayer = null; }
+                heatmapsMulti.forEach(hm => hm.setMap(null)); heatmapsMulti = [];
+            }
 
+            function procesarYMostrarIncidentes() {
+                actualizarVisibilidadCapasBase();
+                limpiarVisualizaciones();
                 if (!document.getElementById('cb-incidentes').checked) return;
 
                 const cbMeses = Array.from(document.querySelectorAll('.cb-mes-ano:checked')).map(cb => cb.value);
@@ -352,59 +350,83 @@
                 });
 
                 const tipoVista = document.querySelector('input[name="tipo-visualizacion"]:checked').value;
+                const esMultiMes = !cbMeses.includes('TODOS') && cbMeses.length > 1;
 
                 if (tipoVista === 'heatmap') {
-                    if (!google.maps.visualization) {
-                        alert("⚠️ Ocurrió un error cargando la librería de Mapa de Calor de Google. Por favor, refresca la página con Ctrl + F5.");
-                        return;
-                    }
-
-                    // Agrupación Matemática para alto rendimiento
+                    // AGRUPAMOS DATOS PARA EVITAR ERRORES DE WEBGL
                     let coordsDict = {};
                     data.forEach(r => {
                         let latStr = (r.Latitud||'').toString().replace(',', '.');
                         let lngStr = (r.Longitud||'').toString().replace(',', '.');
-                        let lat = parseFloat(latStr);
-                        let lng = parseFloat(lngStr);
+                        let lat = parseFloat(latStr); let lng = parseFloat(lngStr);
 
                         if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-                            let key = lat.toFixed(4) + "|" + lng.toFixed(4);
+                            let key = lat.toFixed(4) + "|" + lng.toFixed(4) + "|" + r['Mes/Año'];
                             if (!coordsDict[key]) {
-                                coordsDict[key] = { lat: lat, lng: lng, weight: 0 };
+                                coordsDict[key] = { lat: lat, lng: lng, mes: r['Mes/Año'], weight: 0 };
                             }
                             coordsDict[key].weight += 1;
                         }
                     });
 
-                    let heatmapData = [];
-                    for (let key in coordsDict) {
-                        heatmapData.push({
-                            location: new google.maps.LatLng(coordsDict[key].lat, coordsDict[key].lng),
-                            weight: coordsDict[key].weight
+                    if (esMultiMes) {
+                        cbMeses.forEach(mes => {
+                            const rgb = hexToRgb(mesColorMap[mes] || '#19567C');
+                            let heatmapData = [];
+                            
+                            for (let key in coordsDict) {
+                                if (coordsDict[key].mes === mes) {
+                                    heatmapData.push({
+                                        location: new google.maps.LatLng(coordsDict[key].lat, coordsDict[key].lng),
+                                        weight: coordsDict[key].weight
+                                    });
+                                }
+                            }
+
+                            if (heatmapData.length > 0) {
+                                const capa = new google.maps.visualization.HeatmapLayer({
+                                    data: heatmapData,
+                                    map: map,
+                                    radius: 65, // AUMENTADO DRÁSTICAMENTE PARA EFECTO NUBE
+                                    maxIntensity: 4, // BAJADO PARA SANGRAR COLOR FÁCILMENTE
+                                    gradient: [
+                                        'rgba(0, 0, 0, 0)',
+                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`,
+                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.5)`,
+                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`
+                                    ]
+                                });
+                                heatmapsMulti.push(capa);
+                            }
                         });
+                    } else {
+                        let heatmapData = [];
+                        for (let key in coordsDict) {
+                            heatmapData.push({
+                                location: new google.maps.LatLng(coordsDict[key].lat, coordsDict[key].lng),
+                                weight: coordsDict[key].weight
+                            });
+                        }
+
+                        if (heatmapData.length > 0) {
+                            heatmapLayer = new google.maps.visualization.HeatmapLayer({
+                                data: heatmapData,
+                                map: map,
+                                radius: 65, // AUMENTADO DRÁSTICAMENTE PARA EFECTO NUBE
+                                maxIntensity: 4, // BAJADO PARA SANGRAR COLOR FÁCILMENTE
+                                gradient: [
+                                    'rgba(0, 0, 0, 0)',
+                                    'rgba(74, 181, 224, 0)',
+                                    'rgba(74, 181, 224, 0.6)', // Celeste expansivo
+                                    'rgba(25, 86, 124, 0.9)',  // Azul 
+                                    'rgba(211, 72, 114, 1)'    // Magenta concentrado
+                                ]
+                            });
+                        }
                     }
 
-                    if (heatmapData.length > 0) {
-                        // AQUÍ RESTAURAMOS EL ESTILO QGIS HERMOSO QUE BUSCAMOS
-                        heatmapLayer = new google.maps.visualization.HeatmapLayer({
-                            data: heatmapData,
-                            map: map,
-                            radius: 35, 
-                            maxIntensity: 10,
-                            opacity: 0.9,
-                            gradient: [
-                                'rgba(0, 0, 0, 0)',
-                                'rgba(74, 181, 224, 0)',   
-                                'rgba(74, 181, 224, 0.7)', 
-                                'rgba(25, 86, 124, 0.9)',  
-                                'rgba(211, 72, 114, 1)'    
-                            ]
-                        });
-                    }
                 } else {
                     let clusters = [];
-                    const esMultiMes = !cbMeses.includes('TODOS') && cbMeses.length > 1;
-
                     function getDist(lat1, lon1, lat2, lon2) {
                         const R = 6371e3; const p1 = lat1 * Math.PI/180; const p2 = lat2 * Math.PI/180;
                         const dp = (lat2-lat1) * Math.PI/180; const dl = (lon2-lon1) * Math.PI/180;
