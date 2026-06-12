@@ -244,7 +244,7 @@
         
         let incidentDataTotal = [];
         let clusterOverlays = [];
-        let heatmapLayer = null; // Capa unificada
+        let heatmapLayer = null; 
         
         let IncidentClusterOverlay; 
 
@@ -347,14 +347,13 @@
                 startInfoWindowTimer(); 
             }
 
-            // CARGAS GEOGRÁFICAS BÁSICAS (Límite con zIndex 0 para no tapar el Heatmap)
             fetch('./municipios_Lomas de Zamora.geojson').then(r => r.json()).then(geoJson => {
                 geoJson.features.forEach(feature => {
                     if (feature.geometry.type === 'MultiPolygon' || feature.geometry.type === 'Polygon') {
                         const polys = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
                         polys.forEach(poly => poly.forEach(ring => {
                             const path = ring.map(coord => ({ lat: coord[1], lng: coord[0] }));
-                            const p = new google.maps.Polygon({ paths: path, strokeOpacity: 0, fillColor: '#19567C', fillOpacity: 0.03, map: map, zIndex: 0 }); // zIndex ajustado
+                            const p = new google.maps.Polygon({ paths: path, strokeOpacity: 0, fillColor: '#19567C', fillOpacity: 0.03, map: map, zIndex: 0 });
                             const l = new google.maps.Polyline({ path: path, strokeOpacity: 0, icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 }, offset: '0', repeat: '15px' }], strokeColor: '#19567C', strokeWeight: 3, map: map, zIndex: 1 });
                             limiteElements.push(p, l);
                         }));
@@ -405,7 +404,7 @@
             map.addListener('zoom_changed', updatePointStyles);
 
             // -----------------------------------------------------
-            // LÓGICA DE INCIDENTES (HEATMAP CLÁSICO SIN PESOS)
+            // LÓGICA DE INCIDENTES CON EL DIBUJADO DE LAS "NUBES"
             // -----------------------------------------------------
 
             function limpiarVisualizaciones() {
@@ -425,7 +424,6 @@
                 const cbHoras = Array.from(document.querySelectorAll('.cb-horario:checked')).map(cb => cb.value);
                 const globalCgm = document.getElementById('filtro-global-cgm').value;
 
-                // Filtrar Data Base
                 let data = incidentDataTotal.filter(d => {
                     if (!cbMeses.includes('TODOS') && !cbMeses.includes(d['Mes/Año'])) return false;
                     if (!cbHoras.includes('TODOS') && !cbHoras.includes(d['FranjaHoraria'])) return false;
@@ -439,7 +437,6 @@
                 if (tipoVista === 'heatmap') {
                     
                     try {
-                        // 1. Extraemos los LatLng puros (si hay 30 choques iguales, empujamos 30 puntos idénticos)
                         let heatmapData = [];
                         data.forEach(r => {
                             let latStr = (r.Latitud||'').toString().replace(',', '.');
@@ -452,32 +449,28 @@
                             }
                         });
 
-                        console.log(`Puntos enviados al Heatmap: ${heatmapData.length}`);
-
                         if (heatmapData.length > 0) {
                             heatmapLayer = new google.maps.visualization.HeatmapLayer({
                                 data: heatmapData,
                                 map: map,
-                                radius: 25, 
-                                maxIntensity: 10, // Topamos la intensidad para que no opaque los puntos chicos
+                                // Estos dos parámetros son los responsables de las nubes anchas y suaves
+                                radius: 75, // <--- Radio mucho mayor para difuminar en áreas amplias
+                                maxIntensity: 15, // <--- Regula la opacidad permitiendo que el color sangre
+                                opacity: 0.85,
                                 gradient: [
                                     'rgba(0, 0, 0, 0)',
-                                    'rgba(74, 181, 224, 0.4)',
-                                    'rgba(74, 181, 224, 0.8)',
-                                    'rgba(25, 86, 124, 0.5)',
-                                    'rgba(25, 86, 124, 0.9)',
-                                    'rgba(211, 72, 114, 0.8)',
-                                    'rgba(211, 72, 114, 1)'
+                                    'rgba(74, 181, 224, 0.2)', // Celeste pálido (Bordes)
+                                    'rgba(74, 181, 224, 0.6)', // Celeste sólido
+                                    'rgba(25, 86, 124, 0.8)',  // Azul Institucional
+                                    'rgba(211, 72, 114, 1)'    // Magenta (Núcleo crítico)
                                 ]
                             });
                         }
                     } catch (error) {
                         console.error(error);
-                        alert("Error de Google Maps al dibujar el mapa de calor: " + error.message);
                     }
 
                 } else {
-                    // Lógica de Puntos / Clusters visuales
                     let clusters = [];
                     function getDistanceMeters(lat1, lon1, lat2, lon2) {
                         const R = 6371e3; const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180;
@@ -507,7 +500,6 @@
                 }
             }
 
-            // CARGA CSV PRINCIPAL
             fetch('./seguridad_vial.csv')
                 .then(r => r.text())
                 .then(csvText => {
@@ -564,7 +556,6 @@
                     });
                 });
 
-            // LISTENERS DE INTERFAZ
             document.querySelectorAll('input[name="tipo-visualizacion"]').forEach(r => r.addEventListener('change', procesarYMostrarIncidentes));
             document.getElementById('cb-incidentes').addEventListener('change', procesarYMostrarIncidentes);
             document.getElementById('cb-limite').addEventListener('change', e => limiteElements.forEach(el => el.setMap(e.target.checked ? map : null)));
