@@ -55,6 +55,7 @@
         .custom-close-btn:hover { background-color: #F1F5F9; color: var(--bg-main); }
         .incident-close:hover { color: var(--magenta); }
 
+        /* Estilos Puntos Individuales/Clusters */
         .incident-cluster {
             color: white;
             border: 2px solid white;
@@ -71,14 +72,12 @@
             transition: transform 0.2s;
         }
         .incident-cluster:hover { transform: scale(1.1); z-index: 999 !important; }
-        
         .pulse-cluster { animation: pulse-animation 1.5s infinite; }
         @keyframes pulse-animation {
             0% { box-shadow: 0 0 0 0 rgba(25, 86, 124, 0.7); }
             70% { box-shadow: 0 0 0 15px rgba(25, 86, 124, 0); }
             100% { box-shadow: 0 0 0 0 rgba(25, 86, 124, 0); }
         }
-
         .incident-single {
             cursor: pointer;
             transition: transform 0.2s;
@@ -142,15 +141,15 @@
                     <div class="space-y-3">
                         <label class="flex items-center gap-3 cursor-pointer">
                             <input type="checkbox" id="cb-incidentes" checked class="w-4 h-4 accent-[#19567C]">
-                            <span class="text-sm text-[#0F172A] font-bold">Mapa de Incidentes</span>
+                            <span class="text-sm text-[#0F172A] font-bold">Ver Incidentes</span>
                         </label>
                         
                         <div class="flex gap-4 mt-1 pl-7 text-xs font-bold text-gray-700">
                             <label class="flex items-center gap-1 cursor-pointer">
-                                <input type="radio" name="tipo-visualizacion" value="puntos" checked class="accent-[#19567C]"> Puntos
+                                <input type="radio" name="tipo-visualizacion" value="puntos" class="accent-[#19567C]"> Puntos
                             </label>
                             <label class="flex items-center gap-1 cursor-pointer">
-                                <input type="radio" name="tipo-visualizacion" value="heatmap" class="accent-[#19567C]"> Mapa de Calor
+                                <input type="radio" name="tipo-visualizacion" value="heatmap" checked class="accent-[#19567C]"> Mapa de Calor
                             </label>
                         </div>
 
@@ -214,10 +213,8 @@
 
                 <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
                     <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-1 flex items-center gap-2">
-                        <i data-lucide="bus" class="h-4 w-4"></i> Recorridos Colectivos
+                        <i data-lucide="bus" class="h-4 w-4"></i> Colectivos
                     </h4>
-                    
-                    <h5 class="text-[10px] font-bold text-gray-500 uppercase mb-3 pl-6">Líneas Municipales</h5>
                     <div class="space-y-3 mb-4">
                         <label class="flex items-center gap-3 cursor-pointer">
                             <input type="checkbox" id="cb-yitos" class="w-4 h-4 accent-[#19567C]">
@@ -227,47 +224,7 @@
                             <input type="checkbox" id="cb-evg" class="w-4 h-4 accent-[#19567C]">
                             <span class="text-sm text-[#0F172A] font-bold">Empresa EVG</span>
                         </label>
-                        <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" id="cb-autobuses" class="w-4 h-4 accent-[#19567C]">
-                            <span class="text-sm text-[#0F172A] font-bold">Empresa Autobuses</span>
-                        </label>
                     </div>
-
-                    <h5 class="text-[10px] font-bold text-gray-500 uppercase mb-3 mt-4 pl-6 border-t border-[#19567C]/20 pt-3">Líneas Provinciales</h5>
-                    <div class="space-y-3 mb-4">
-                        <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" id="cb-provinciales" class="w-4 h-4 accent-[#19567C]">
-                            <span class="text-sm text-[#0F172A] font-bold">Recorridos Provinciales</span>
-                        </label>
-                    </div>
-
-                    <h5 class="text-[10px] font-bold text-gray-500 uppercase mb-3 mt-4 pl-6 border-t border-[#19567C]/20 pt-3">Líneas Nacionales</h5>
-                    <div class="space-y-3">
-                        <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" id="cb-nacionales" class="w-4 h-4 accent-[#19567C]">
-                            <span class="text-sm text-[#0F172A] font-bold">Recorridos Nacionales</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
-                    <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-street-view text-[#19567C] h-4 w-4"></i> Street View
-                    </h4>
-                    <label class="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" id="cb-streetview" class="w-4 h-4 accent-[#19567C]">
-                        <span class="text-sm text-[#0F172A] font-bold">Habilitar "Pegman"</span>
-                    </label>
-                </div>
-
-                <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
-                    <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-3 flex items-center gap-2">
-                        <i data-lucide="activity" class="h-4 w-4"></i> Tráfico
-                    </h4>
-                    <label class="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" id="cb-trafico" class="w-4 h-4 accent-[#19567C]">
-                        <span class="text-sm text-[#0F172A] font-bold">Ver Tráfico Real</span>
-                    </label>
                 </div>
 
             </div>
@@ -276,22 +233,18 @@
         <div class="flex-1 bg-white p-2 rounded-xl shadow-lg border border-[#E6EDF3] flex flex-col min-h-[500px] relative z-10">
             <div id="map"></div>
         </div>
-
     </main>
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2MHti5Cy4IDKPc3Iu0ypNQg_BgsjcMoQ&libraries=visualization&callback=initMap" defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2MHti5Cy4IDKPc3Iu0ypNQg_BgsjcMoQ&callback=initMap" defer></script>
 
     <script>
-        let map, trafficLayer, infoWindow;
-        let infoWindowTimer; 
-        let cgmLayer, semaforosLayer, reductoresLayer, solicitudesLayer;
-        let yitosLayer, evgLayer, autobusesLayer; 
-        let provincialesLayer, nacionalesLayer; 
+        let map, infoWindow, infoWindowTimer; 
+        let cgmLayer, semaforosLayer, reductoresLayer, solicitudesLayer, yitosLayer, evgLayer; 
         let limiteElements = []; 
         
         let incidentDataTotal = [];
         let clusterOverlays = [];
-        let heatmapLayer = null;
+        let heatmapElements = []; // Array nativo para los círculos de calor
         let IncidentClusterOverlay; 
 
         let mesColorMap = {};
@@ -302,9 +255,7 @@
 
         function startInfoWindowTimer() {
             if (infoWindowTimer) clearTimeout(infoWindowTimer);
-            infoWindowTimer = setTimeout(() => {
-                if (infoWindow) infoWindow.close();
-            }, 10000); 
+            infoWindowTimer = setTimeout(() => { if (infoWindow) infoWindow.close(); }, 10000); 
         }
 
         window.closeInfoWindow = function() {
@@ -339,95 +290,74 @@
                 center: { lat: -34.7573, lng: -58.4035 },
                 zoom: 13,
                 styles: mapStyle,
-                mapTypeControl: false,
-                streetViewControl: false, 
-                streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM }
+                mapTypeControl: false, streetViewControl: false
             });
 
+            // CLASE PARA LA VISTA DE "PUNTOS"
             IncidentClusterOverlay = class extends google.maps.OverlayView {
                 constructor(position, count, address, mapInstance, fechas, color) {
                     super();
-                    this.position = position;
-                    this.count = count;
-                    this.address = address;
-                    this.fechas = fechas || []; 
-                    this.color = color || '#19567C'; 
-                    this.div = null;
-                    this.setMap(mapInstance);
+                    this.position = position; this.count = count; this.address = address;
+                    this.fechas = fechas || []; this.color = color || '#19567C'; 
+                    this.div = null; this.setMap(mapInstance);
                 }
                 onAdd() {
                     this.div = document.createElement('div');
                     this.div.style.position = 'absolute';
-                    
                     if (this.count === 1) {
                         this.div.className = 'incident-single';
                         const iconAlert = '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="9" x2="12" y2="13" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>';
-                        this.div.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="100%" height="100%" style="display:block;"><circle cx="16" cy="16" r="15" fill="${this.color}" stroke="#FFFFFF" stroke-width="2"/><g transform="translate(4, 4) scale(0.75)">${iconAlert}</g></svg>`;
+                        this.div.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="100%" height="100%"><circle cx="16" cy="16" r="15" fill="${this.color}" stroke="#FFFFFF" stroke-width="2"/><g transform="translate(4, 4) scale(0.75)">${iconAlert}</g></svg>`;
                     } else {
                         this.div.className = 'incident-cluster';
                         this.div.style.backgroundColor = this.color;
                         if (this.count > 5) this.div.classList.add('pulse-cluster');
                         this.div.innerHTML = this.count;
                     }
-                    
                     this.div.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        const criticoHtml = this.count > 5 ? `<p style="margin: 4px 0; font-size: 12px; color: #19567C; font-weight: bold;"><i class="fa-solid fa-triangle-exclamation"></i> ¡Punto Crítico!</p>` : '';
-                        const fechasList = this.fechas.map(f => `<li style="margin-bottom: 2px;">${f}</li>`).join('');
-                        const fechasHtml = `<div style="margin-top: 10px;"><p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 700; color: #19567C;">Fechas Registradas:</p><div class="custom-scrollbar" style="max-height: 80px; overflow-y: auto; background-color: #F3F6F9; border-radius: 4px; padding: 4px 8px; border: 1px solid #E6EDF3;"><ul style="margin: 0; padding-left: 12px; color: #475569; font-size: 11px;">${fechasList}</ul></div></div>`;
-
-                        const content = `<div style="font-family: 'Montserrat', sans-serif; min-width: 220px; position: relative;"><button onclick="window.closeInfoWindow()" class="custom-close-btn incident-close">&times;</button><h3 style="font-weight: 800; font-size: 14px; color: #19567C; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px; padding-right: 20px;">Zona de Incidentes</h3><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Dirección:</b> ${this.address}</p><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Total Registrados:</b> ${this.count}</p>${criticoHtml}${fechasHtml}</div>`;
-                        infoWindow.setContent(content);
-                        infoWindow.setPosition(this.position);
-                        infoWindow.open(this.getMap());
-                        startInfoWindowTimer(); 
+                        mostrarPopupIncidente(this.position, this.address, this.count, this.fechas);
                     });
-
                     const panes = this.getPanes();
                     panes.overlayMouseTarget.appendChild(this.div);
                 }
                 draw() {
                     if (!this.div) return;
-                    const overlayProjection = this.getProjection();
-                    const pos = overlayProjection.fromLatLngToDivPixel(this.position);
-                    
+                    const pos = this.getProjection().fromLatLngToDivPixel(this.position);
                     if (this.count === 1) {
                         const zoom = this.getMap().getZoom();
-                        let size = 10;   
-                        if (zoom >= 15) size = 20;       
-                        else if (zoom >= 13) size = 14; 
-
-                        this.div.style.width = size + 'px';
-                        this.div.style.height = size + 'px';
-                        this.div.style.left = (pos.x - size/2) + 'px';
-                        this.div.style.top = (pos.y - size/2) + 'px';
+                        let size = zoom >= 15 ? 20 : (zoom >= 13 ? 14 : 10);
+                        this.div.style.width = size + 'px'; this.div.style.height = size + 'px';
+                        this.div.style.left = (pos.x - size/2) + 'px'; this.div.style.top = (pos.y - size/2) + 'px';
                     } else {
-                        this.div.style.left = (pos.x - 12) + 'px';
-                        this.div.style.top = (pos.y - 12) + 'px';
+                        this.div.style.left = (pos.x - 12) + 'px'; this.div.style.top = (pos.y - 12) + 'px';
                     }
                 }
-                onRemove() {
-                    if (this.div) {
-                        this.div.parentNode.removeChild(this.div);
-                        this.div = null;
-                    }
-                }
+                onRemove() { if (this.div) { this.div.parentNode.removeChild(this.div); this.div = null; } }
             };
 
-            // Cargas GeoJSON
+            function mostrarPopupIncidente(position, address, count, fechas) {
+                const criticoHtml = count > 5 ? `<p style="margin: 4px 0; font-size: 12px; color: #19567C; font-weight: bold;"><i class="fa-solid fa-triangle-exclamation"></i> ¡Punto Crítico!</p>` : '';
+                const fechasList = fechas.map(f => `<li style="margin-bottom: 2px;">${f}</li>`).join('');
+                const fechasHtml = `<div style="margin-top: 10px;"><p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 700; color: #19567C;">Fechas Registradas:</p><div class="custom-scrollbar" style="max-height: 80px; overflow-y: auto; background-color: #F3F6F9; border-radius: 4px; padding: 4px 8px; border: 1px solid #E6EDF3;"><ul style="margin: 0; padding-left: 12px; color: #475569; font-size: 11px;">${fechasList}</ul></div></div>`;
+                const content = `<div style="font-family: 'Montserrat', sans-serif; min-width: 220px; position: relative;"><button onclick="window.closeInfoWindow()" class="custom-close-btn incident-close">&times;</button><h3 style="font-weight: 800; font-size: 14px; color: #19567C; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px; padding-right: 20px;">Zona de Incidentes</h3><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Dirección:</b> ${address}</p><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Total Registrados:</b> ${count}</p>${criticoHtml}${fechasHtml}</div>`;
+                infoWindow.setContent(content);
+                infoWindow.setPosition(position);
+                infoWindow.open(map);
+                startInfoWindowTimer(); 
+            }
+
+            // CARGA LÍMITE Y CGM
             fetch('./municipios_Lomas de Zamora.geojson').then(r => r.json()).then(geoJson => {
                 geoJson.features.forEach(feature => {
                     if (feature.geometry.type === 'MultiPolygon' || feature.geometry.type === 'Polygon') {
                         const polys = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
-                        polys.forEach(poly => {
-                            poly.forEach(ring => {
-                                const path = ring.map(coord => ({ lat: coord[1], lng: coord[0] }));
-                                const p = new google.maps.Polygon({ paths: path, strokeOpacity: 0, fillColor: '#19567C', fillOpacity: 0.03, map: map, zIndex: 2 });
-                                const lineSymbol = { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 };
-                                const l = new google.maps.Polyline({ path: path, strokeOpacity: 0, icons: [{ icon: lineSymbol, offset: '0', repeat: '15px' }], strokeColor: '#19567C', strokeWeight: 3, map: map, zIndex: 3 });
-                                limiteElements.push(p, l);
-                            });
-                        });
+                        polys.forEach(poly => poly.forEach(ring => {
+                            const path = ring.map(coord => ({ lat: coord[1], lng: coord[0] }));
+                            const p = new google.maps.Polygon({ paths: path, strokeOpacity: 0, fillColor: '#19567C', fillOpacity: 0.03, map: map, zIndex: 2 });
+                            const l = new google.maps.Polyline({ path: path, strokeOpacity: 0, icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 }, offset: '0', repeat: '15px' }], strokeColor: '#19567C', strokeWeight: 3, map: map, zIndex: 3 });
+                            limiteElements.push(p, l);
+                        }));
                     }
                 });
             }).catch(e => console.log('Error cargando límite:', e));
@@ -439,230 +369,118 @@
                 geoJson.features.forEach(f => { if (f.properties && f.properties.CGM) cgmSet.add(f.properties.CGM.toUpperCase()); });
                 const selectGlobalCgm = document.getElementById('filtro-global-cgm');
                 Array.from(cgmSet).sort().forEach(cgm => {
-                    const opt = document.createElement('option');
-                    opt.value = cgm; opt.textContent = cgm;
+                    const opt = document.createElement('option'); opt.value = cgm; opt.textContent = cgm;
                     selectGlobalCgm.appendChild(opt);
                 });
                 selectGlobalCgm.addEventListener('change', () => { updatePointStyles(); procesarYMostrarIncidentes(); });
                 updatePointStyles(); 
-            }).catch(e => console.log('Error cargando CGM:', e));
+            });
             cgmLayer.setMap(map);
 
-            semaforosLayer = new google.maps.Data(); semaforosLayer.loadGeoJson('./Semaforos Activos.geojson');
-            reductoresLayer = new google.maps.Data(); reductoresLayer.loadGeoJson('./Reductores de Velocidad.geojson');
-            solicitudesLayer = new google.maps.Data(); solicitudesLayer.loadGeoJson('./Solicitudes Semaforos 2026.geojson');
-
-            yitosLayer = new google.maps.Data(); yitosLayer.loadGeoJson('./Recorridos Yitos.geojson');
-            evgLayer = new google.maps.Data(); evgLayer.loadGeoJson('./Recorridos EVG.geojson');
-            autobusesLayer = new google.maps.Data(); autobusesLayer.loadGeoJson('./Recorridos Autobuses.geojson');
-            provincialesLayer = new google.maps.Data(); provincialesLayer.loadGeoJson('./Recorridos Provinciales.geojson');
-            nacionalesLayer = new google.maps.Data(); nacionalesLayer.loadGeoJson('./Recorridos Nacionales.geojson');
-
-            const pathSemaforo = '<rect x="7" y="2" width="10" height="20" rx="3"/><circle cx="12" cy="7" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="17" r="1.5"/>';
-            const pathReductor = '<path d="m20.9 18.55-8-15.98a1 1 0 0 0-1.8 0l-8 15.98"/><path d="M4.34 10a11.24 11.24 0 0 1 15.32 0"/><path d="M8.64 14.5a5.42 5.42 0 0 1 6.72 0"/><path d="M2 22h20"/>';
-            const pathSolicitud = '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15h6"/>';
-
-            function getSvgIcon(color, iconPath, size) {
-                const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="${size}" height="${size}"><circle cx="16" cy="16" r="15" fill="${color}" stroke="#FFFFFF" stroke-width="2"/><g fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(6, 6) scale(0.83)">${iconPath}</g></svg>`;
-                return { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg), scaledSize: new google.maps.Size(size, size), anchor: new google.maps.Point(size/2, size/2) };
-            }
-
-            function updatePointStyles() {
-                const zoom = map.getZoom();
-                let size = 10;   
-                if (zoom >= 15) size = 20;       
-                else if (zoom >= 13) size = 14; 
-
-                const globalCgmSelect = document.getElementById('filtro-global-cgm');
-                const globalCgm = globalCgmSelect ? globalCgmSelect.value : "TODOS";
-
-                const applyStyleWithFilter = (layer, color, path) => {
-                    layer.setStyle((feature) => {
-                        const featCgm = feature.getProperty('CGM');
-                        let isVisible = true;
-                        if (globalCgm !== "TODOS") { if (!featCgm || featCgm.toUpperCase() !== globalCgm) isVisible = false; }
-                        return { icon: getSvgIcon(color, path, size), zIndex: 10, visible: isVisible };
-                    });
-                };
-
-                applyStyleWithFilter(semaforosLayer, '#19567C', pathSemaforo);
-                applyStyleWithFilter(reductoresLayer, '#D34872', pathReductor);
-                applyStyleWithFilter(solicitudesLayer, '#4AB5E0', pathSolicitud);
-
-                yitosLayer.setStyle(() => ({ strokeColor: '#D34872', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));         
-                evgLayer.setStyle(() => ({ strokeColor: '#19567C', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));           
-                autobusesLayer.setStyle(() => ({ strokeColor: '#4AB5E0', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));     
-                provincialesLayer.setStyle(() => ({ strokeColor: '#D34872', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));  
-                nacionalesLayer.setStyle(() => ({ strokeColor: '#19567C', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));    
-
-                cgmLayer.setStyle((feature) => {
-                    const featCgm = feature.getProperty('CGM');
-                    let isVisible = true; let opacidad = 0.25; let grosor = 3;
-                    if (globalCgm !== "TODOS") {
-                        if (!featCgm || featCgm.toUpperCase() !== globalCgm) isVisible = false; 
-                        else { opacidad = 0.4; grosor = 4; }
-                    }
-                    return { fillColor: '#4AB5E0', fillOpacity: opacidad, strokeColor: '#19567C', strokeWeight: grosor, strokeOpacity: 0.9, zIndex: 1, visible: isVisible };
-                });
-            }
-
-            map.addListener('zoom_changed', updatePointStyles);
-
-            function bindPopup(layer, colorTitle, defaultTitle, isPolygon) {
-                layer.addListener('click', function(event) {
-                    const name = event.feature.getProperty('Name') || defaultTitle;
-                    let content = `<div style="font-family: 'Montserrat', sans-serif; min-width: 180px; position: relative;"><button onclick="window.closeInfoWindow()" class="custom-close-btn">&times;</button>`;
-                    if (isPolygon) {
-                        content += `<h3 style="font-weight: 800; font-size: 14px; color: ${colorTitle}; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px; padding-right: 20px;">CGM: ${event.feature.getProperty('CGM')}</h3><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Manzanas:</b> ${event.feature.getProperty('Manzanas') || '-'}</p><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Cuadras:</b> ${event.feature.getProperty('Cuadras') || '-'}</p><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Viviendas:</b> ${event.feature.getProperty('Viviendas') || '-'}</p>`;
-                    } else {
-                        content += `<h3 style="font-weight: 800; font-size: 14px; color: ${colorTitle}; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px; padding-right: 20px;">${name}</h3>`;
-                        if (event.feature.getProperty('description')) content += `<p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Detalle:</b> ${event.feature.getProperty('description')}</p>`;
-                        if (event.feature.getProperty('CGM')) content += `<p style="margin: 4px 0; font-size: 12px; color: #333;"><b>CGM:</b> ${event.feature.getProperty('CGM')}</p>`;
-                    }
-                    content += `</div>`;
-                    infoWindow.setContent(content);
-                    const geomType = event.feature.getGeometry().getType();
-                    if (geomType === 'Point') infoWindow.setPosition(event.feature.getGeometry().get());
-                    else infoWindow.setPosition(event.latLng); 
-                    infoWindow.open(map);
-                    startInfoWindowTimer(); 
-                });
-            }
-
-            bindPopup(cgmLayer, '#19567C', '', true);
-            bindPopup(semaforosLayer, '#19567C', 'Semáforo Activo', false);
-            bindPopup(reductoresLayer, '#D34872', 'Reductor de Velocidad', false);
-            bindPopup(solicitudesLayer, '#4AB5E0', 'Solicitud 2026', false);
-            bindPopup(yitosLayer, '#D34872', 'Recorrido Empresa Yitos', false);
-            bindPopup(evgLayer, '#19567C', 'Recorrido Empresa EVG', false);
-            bindPopup(autobusesLayer, '#4AB5E0', 'Recorrido Empresa Autobuses', false);
-            bindPopup(provincialesLayer, '#D34872', 'Recorrido Provincial', false);
-            bindPopup(nacionalesLayer, '#19567C', 'Recorrido Nacional', false);
-
-            trafficLayer = new google.maps.TrafficLayer();
-
             // -----------------------------------------------------
-            // LÓGICA DE INCIDENTES (PUNTOS Y MAPA DE CALOR BLINDADO)
+            // LÓGICA DE INCIDENTES (NUEVO HEATMAP POR GEOMETRÍAS)
             // -----------------------------------------------------
 
             function getDistanceMeters(lat1, lon1, lat2, lon2) {
-                const R = 6371e3;
-                const φ1 = lat1 * Math.PI/180;
-                const φ2 = lat2 * Math.PI/180;
-                const Δφ = (lat2-lat1) * Math.PI/180;
-                const Δλ = (lon2-lon1) * Math.PI/180;
+                const R = 6371e3; const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180;
+                const Δφ = (lat2-lat1) * Math.PI/180; const Δλ = (lon2-lon1) * Math.PI/180;
                 const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-                return R * c; 
+                return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
             }
 
-            function limpiarClusters() {
-                clusterOverlays.forEach(overlay => overlay.setMap(null));
-                clusterOverlays = [];
+            function limpiarVisualizaciones() {
+                clusterOverlays.forEach(overlay => overlay.setMap(null)); clusterOverlays = [];
+                heatmapElements.forEach(el => el.setMap(null)); heatmapElements = [];
             }
 
             function procesarYMostrarIncidentes() {
-                limpiarClusters();
-                if (heatmapLayer) {
-                    heatmapLayer.setMap(null);
-                    heatmapLayer = null;
-                }
-                
+                limpiarVisualizaciones();
                 if (!document.getElementById('cb-incidentes').checked) return;
 
-                const checkboxesMeses = document.querySelectorAll('.cb-mes-ano:checked');
-                let mesesSeleccionados = Array.from(checkboxesMeses).map(cb => cb.value);
-                const esTodosMeses = mesesSeleccionados.includes('TODOS') || mesesSeleccionados.length === 0;
+                const cbMeses = Array.from(document.querySelectorAll('.cb-mes-ano:checked')).map(cb => cb.value);
+                const cbHoras = Array.from(document.querySelectorAll('.cb-horario:checked')).map(cb => cb.value);
+                const globalCgm = document.getElementById('filtro-global-cgm').value;
 
-                const checkboxesHorario = document.querySelectorAll('.cb-horario:checked');
-                let horariosSeleccionados = Array.from(checkboxesHorario).map(cb => cb.value);
-                const esTodosHorarios = horariosSeleccionados.includes('TODOS') || horariosSeleccionados.length === 0;
+                let data = incidentDataTotal.filter(d => {
+                    if (!cbMeses.includes('TODOS') && !cbMeses.includes(d['Mes/Año'])) return false;
+                    if (!cbHoras.includes('TODOS') && !cbHoras.includes(d['FranjaHoraria'])) return false;
+                    if (globalCgm !== "TODOS" && (d['CGM']||"").toUpperCase() !== globalCgm) return false;
+                    return true;
+                });
 
-                const globalCgmSelect = document.getElementById('filtro-global-cgm');
-                const globalCgm = globalCgmSelect ? globalCgmSelect.value : "TODOS";
+                const tipoVista = document.querySelector('input[name="tipo-visualizacion"]:checked').value;
+                const esMultiMes = !cbMeses.includes('TODOS') && cbMeses.length > 1;
 
-                let dataFiltrada = incidentDataTotal;
-                
-                if (!esTodosMeses) dataFiltrada = dataFiltrada.filter(d => mesesSeleccionados.includes(d['Mes/Año']));
-                if (!esTodosHorarios) dataFiltrada = dataFiltrada.filter(d => horariosSeleccionados.includes(d['FranjaHoraria']));
-                if (globalCgm !== "TODOS") {
-                    dataFiltrada = dataFiltrada.filter(d => {
-                        const rowCgm = d['CGM'] || "";
-                        return rowCgm.toUpperCase() === globalCgm;
-                    });
-                }
+                // 1. Agrupar la data en clusters por proximidad (30 metros)
+                let clusters = [];
+                data.forEach(row => {
+                    const lat = parseFloat((row.Latitud||'').toString().replace(',','.'));
+                    const lng = parseFloat((row.Longitud||'').toString().replace(',','.'));
+                    if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
 
-                const tipoVisualizacion = document.querySelector('input[name="tipo-visualizacion"]:checked').value;
-                const esMultiMes = !esTodosMeses && mesesSeleccionados.length > 1;
+                    let found = clusters.find(c => (!esMultiMes || c.mes === row['Mes/Año']) && getDistanceMeters(lat, lng, c.lat, c.lng) <= 30);
+                    const fecha = (row.Fecha_Creacion_dt || '') + (row.FranjaHoraria !== 'DESCONOCIDO' ? ` (${row.FranjaHoraria})` : '');
 
-                if (tipoVisualizacion === 'heatmap') {
-                    const points = [];
-                    dataFiltrada.forEach(row => {
-                        let latStr = (row.Latitud || '').toString().trim().replace(',', '.');
-                        let lngStr = (row.Longitud || '').toString().trim().replace(',', '.');
-                        
-                        const lat = parseFloat(latStr);
-                        const lng = parseFloat(lngStr);
-                        
-                        // Blindaje extra: no dibujar si la coordenada es 0 o está corrupta
-                        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-                            points.push(new google.maps.LatLng(lat, lng));
+                    if (found) { found.count++; found.fechas.push(fecha); } 
+                    else { clusters.push({ lat, lng, count: 1, direccion: row.direccion_normalizada || 'Desconocida', fechas: [fecha], mes: row['Mes/Año'] }); }
+                });
+
+                // 2. Renderizar según la selección del usuario
+                if (tipoVista === 'heatmap') {
+                    // MÉTODO DE AURAS SUPERPUESTAS (Bulletproof Heatmap)
+                    clusters.forEach(c => {
+                        let colorHex = '#4AB5E0'; // Base Celeste
+                        let colorPunto = '#19567C'; // Punto Azul
+
+                        if (esMultiMes && mesColorMap[c.mes]) {
+                            colorHex = mesColorMap[c.mes]; colorPunto = mesColorMap[c.mes];
+                        } else if (c.count > 2) {
+                            colorHex = '#19567C'; colorPunto = '#19567C';
                         }
-                    });
+                        if (c.count > 5) {
+                            colorHex = '#D34872'; colorPunto = '#D34872'; // Magenta Crítico
+                        }
 
-                    console.log(`[DEBUG] Renderizando Heatmap con ${points.length} puntos procesados.`);
+                        // Calcular radio y opacidad dinámicos
+                        let auraRadius = 150 + (c.count * 15);
+                        if (auraRadius > 300) auraRadius = 300;
+                        let opacidad = 0.15 + (c.count * 0.05);
+                        if (opacidad > 0.6) opacidad = 0.6;
 
-                    if (points.length > 0) {
-                        heatmapLayer = new google.maps.visualization.HeatmapLayer({
-                            data: points,
+                        // Crear el Aura (Círculo grande translúcido)
+                        const aura = new google.maps.Circle({
+                            strokeWeight: 0,
+                            fillColor: colorHex,
+                            fillOpacity: opacidad,
                             map: map,
-                            radius: 20,          // Radio controlado
-                            opacity: 0.9,        // Asegura visibilidad sobre el fondo claro
-                            maxIntensity: 5,     // <--- CRÍTICO: Previene que la capa se vuelva transparente si los puntos se solapan exactos
-                            gradient: [
-                                'rgba(255, 255, 255, 0)',   // Transparencia requerida en el índice 0
-                                'rgba(74, 181, 224, 0.7)',  // Celeste
-                                'rgba(25, 86, 124, 0.9)',   // Azul institucional
-                                'rgba(211, 72, 114, 1)'     // Magenta (Pico de densidad)
-                            ]
+                            center: { lat: c.lat, lng: c.lng },
+                            radius: auraRadius,
+                            clickable: false // El aura no intercepta clicks
                         });
-                    }
+
+                        // Crear el Punto Central (Círculo pequeño definido)
+                        const dot = new google.maps.Circle({
+                            strokeWeight: 1,
+                            strokeColor: '#FFFFFF',
+                            fillColor: colorPunto,
+                            fillOpacity: 0.85,
+                            map: map,
+                            center: { lat: c.lat, lng: c.lng },
+                            radius: 20,
+                            cursor: 'pointer',
+                            zIndex: 99
+                        });
+
+                        // El punto abre el mismo InfoWindow que la vista de clusters
+                        dot.addListener('click', () => {
+                            mostrarPopupIncidente({ lat: c.lat, lng: c.lng }, c.direccion, c.count, c.fechas);
+                        });
+
+                        heatmapElements.push(aura, dot);
+                    });
 
                 } else {
-                    let clusters = [];
-
-                    dataFiltrada.forEach(row => {
-                        let latStr = (row.Latitud || '').toString().trim().replace(',', '.');
-                        let lngStr = (row.Longitud || '').toString().trim().replace(',', '.');
-                        
-                        const lat = parseFloat(latStr);
-                        const lng = parseFloat(lngStr);
-                        if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
-
-                        let foundCluster = null;
-                        for (let c of clusters) {
-                            const mismoMes = !esMultiMes || c.mes === row['Mes/Año'];
-                            if (mismoMes && getDistanceMeters(lat, lng, c.lat, c.lng) <= 30) {
-                                foundCluster = c;
-                                break;
-                            }
-                        }
-
-                        const detalleFranja = row.FranjaHoraria !== 'DESCONOCIDO' ? `(${row.FranjaHoraria})` : '';
-                        const fecha = (row.Fecha_Creacion_dt || 'Fecha desconocida') + ' ' + detalleFranja;
-
-                        if (foundCluster) {
-                            foundCluster.count++;
-                            foundCluster.fechas.push(fecha); 
-                        } else {
-                            clusters.push({
-                                lat: lat, lng: lng, count: 1,
-                                direccion: row.direccion_normalizada || row['Calle y Altura'] || 'Ubicación Desconocida',
-                                fechas: [fecha], mes: row['Mes/Año']
-                            });
-                        }
-                    });
-
+                    // MÉTODO DE CLUSTERS HTML (Puntos Individuales)
                     clusters.forEach(c => {
                         let colorHex = '#19567C'; 
                         if (esMultiMes && mesColorMap[c.mes]) colorHex = mesColorMap[c.mes];
@@ -672,118 +490,76 @@
                 }
             }
 
+            // CARGA DE CSV PRINCIPAL
             fetch('./seguridad_vial.csv')
-                .then(response => response.text())
+                .then(r => r.text())
                 .then(csvText => {
                     Papa.parse(csvText, {
-                        header: true,
-                        delimiter: ";", 
-                        skipEmptyLines: true,
+                        header: true, delimiter: ";", skipEmptyLines: true,
                         complete: function(results) {
                             incidentDataTotal = results.data;
                             const mesesSet = new Set();
                             
                             incidentDataTotal.forEach(r => {
-                                let latVal = r['Lat'] || r['lat'] || r['Latitud'] || r['latitud'] || '';
-                                let lngVal = r['Lon'] || r['lon'] || r['Longitud'] || r['longitud'] || r['Lng'] || r['lng'] || '';
-                                
-                                if (latVal === '' || lngVal === '') {
-                                    for (let key in r) {
-                                        let cleanK = key.trim().toLowerCase();
-                                        if (cleanK === 'lat' || cleanK === 'latitud') latVal = r[key];
-                                        if (cleanK === 'lon' || cleanK === 'lng' || cleanK === 'longitud') lngVal = r[key];
-                                    }
-                                }
-
+                                // Sanitización robusta
+                                let latVal = r['Lat']||r['lat']||r['Latitud']||r['latitud']||'';
+                                let lngVal = r['Lon']||r['lon']||r['Longitud']||r['longitud']||r['Lng']||r['lng']||'';
                                 r['Latitud'] = latVal.toString().trim().replace(',', '.');
                                 r['Longitud'] = lngVal.toString().trim().replace(',', '.');
 
                                 if (r['Fecha']) {
                                     const parts = r['Fecha'].split('-');
-                                    if (parts.length >= 2) {
-                                        const mesAno = parts[1] + '/' + parts[0];
-                                        r['Mes/Año'] = mesAno;
-                                        mesesSet.add(mesAno);
-                                    }
+                                    if (parts.length >= 2) { r['Mes/Año'] = parts[1]+'/'+parts[0]; mesesSet.add(r['Mes/Año']); }
                                 }
-
                                 if (r['Hora']) {
-                                    const timeParts = r['Hora'].split(':');
-                                    if (timeParts.length >= 1) {
-                                        const hour = parseInt(timeParts[0], 10);
-                                        if (!isNaN(hour)) {
-                                            if (hour >= 0 && hour < 6) r['FranjaHoraria'] = 'MADRUGADA';
-                                            else if (hour >= 6 && hour < 12) r['FranjaHoraria'] = 'MAÑANA';
-                                            else if (hour >= 12 && hour < 18) r['FranjaHoraria'] = 'TARDE';
-                                            else if (hour >= 18 && hour <= 24) r['FranjaHoraria'] = 'NOCHE';
-                                        } else { r['FranjaHoraria'] = 'DESCONOCIDO'; }
-                                    }
-                                } else { r['FranjaHoraria'] = 'DESCONOCIDO'; }
+                                    const h = parseInt(r['Hora'].split(':')[0], 10);
+                                    if (!isNaN(h)) {
+                                        if (h >= 0 && h < 6) r['FranjaHoraria'] = 'MADRUGADA';
+                                        else if (h >= 6 && h < 12) r['FranjaHoraria'] = 'MAÑANA';
+                                        else if (h >= 12 && h < 18) r['FranjaHoraria'] = 'TARDE';
+                                        else r['FranjaHoraria'] = 'NOCHE';
+                                    } else r['FranjaHoraria'] = 'DESCONOCIDO';
+                                } else r['FranjaHoraria'] = 'DESCONOCIDO';
 
-                                let dir = "";
-                                if (r['Calle']) dir += r['Calle'];
-                                if (r['Altura'] && r['Altura'] !== '0') dir += " " + r['Altura'];
-                                if (r['Interseccion']) dir += " y " + r['Interseccion'];
-                                r['direccion_normalizada'] = dir.trim() !== "" ? dir : "Ubicación Desconocida";
-
-                                r['Fecha_Creacion_dt'] = (r['Fecha'] || '') + ' ' + (r['Hora'] || '');
+                                r['direccion_normalizada'] = [r['Calle'], r['Altura']!=='0'?r['Altura']:'', r['Interseccion']?'y '+r['Interseccion']:''].filter(Boolean).join(' ') || "Ubicación Desconocida";
+                                r['Fecha_Creacion_dt'] = (r['Fecha']||'')+' '+(r['Hora']||'');
                             });
                             
                             const containerMesAno = document.getElementById('container-mes-ano');
-                            const mesesArray = Array.from(mesesSet).sort();
-
-                            mesesArray.forEach((mes, idx) => { mesColorMap[mes] = coloresDisponibles[idx % coloresDisponibles.length]; });
-                            mesesArray.forEach(mes => {
-                                const lbl = document.createElement('label');
-                                lbl.className = 'flex items-center gap-2 cursor-pointer font-medium';
+                            Array.from(mesesSet).sort().forEach((mes, idx) => {
+                                mesColorMap[mes] = coloresDisponibles[idx % coloresDisponibles.length];
+                                const lbl = document.createElement('label'); lbl.className = 'flex items-center gap-2 cursor-pointer font-medium';
                                 lbl.innerHTML = `<input type="checkbox" value="${mes}" class="cb-mes-ano w-3.5 h-3.5 accent-[#19567C]"><span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${mesColorMap[mes]};"></span><span>${mes}</span>`;
                                 containerMesAno.appendChild(lbl);
                             });
 
-                            containerMesAno.addEventListener('change', (e) => {
-                                if (e.target.id === 'cb-mes-todos' && e.target.checked) {
-                                    document.querySelectorAll('.cb-mes-ano:not(#cb-mes-todos)').forEach(cb => cb.checked = false);
-                                } else if (e.target.classList.contains('cb-mes-ano') && e.target.id !== 'cb-mes-todos' && e.target.checked) {
-                                    const todosCb = document.getElementById('cb-mes-todos');
-                                    if (todosCb) todosCb.checked = false;
-                                }
-                                procesarYMostrarIncidentes();
+                            document.querySelectorAll('.cb-mes-ano, .cb-horario').forEach(cb => {
+                                cb.addEventListener('change', (e) => {
+                                    const group = e.target.classList.contains('cb-mes-ano') ? '.cb-mes-ano' : '.cb-horario';
+                                    const todosId = group === '.cb-mes-ano' ? 'cb-mes-todos' : 'cb-horario-todos';
+                                    if (e.target.id === todosId && e.target.checked) document.querySelectorAll(`${group}:not(#${todosId})`).forEach(c => c.checked = false);
+                                    else if (e.target.id !== todosId && e.target.checked) document.getElementById(todosId).checked = false;
+                                    procesarYMostrarIncidentes();
+                                });
                             });
 
                             procesarYMostrarIncidentes();
                         }
                     });
-                }).catch(e => console.log("Error cargando CSV:", e));
+                });
 
-            const containerHorario = document.getElementById('container-horario');
-            if(containerHorario) {
-                containerHorario.addEventListener('change', (e) => {
-                    if (e.target.id === 'cb-horario-todos' && e.target.checked) {
-                        document.querySelectorAll('.cb-horario:not(#cb-horario-todos)').forEach(cb => cb.checked = false);
-                    } else if (e.target.classList.contains('cb-horario') && e.target.id !== 'cb-horario-todos' && e.target.checked) {
-                        const todosCb = document.getElementById('cb-horario-todos');
-                        if (todosCb) todosCb.checked = false;
-                    }
-                    procesarYMostrarIncidentes();
+            // GESTIÓN DE EVENTOS DE CAPAS E INTERFAZ
+            document.querySelectorAll('input[name="tipo-visualizacion"]').forEach(r => r.addEventListener('change', procesarYMostrarIncidentes));
+            document.getElementById('cb-incidentes').addEventListener('change', procesarYMostrarIncidentes);
+            document.getElementById('cb-limite').addEventListener('change', e => limiteElements.forEach(el => el.setMap(e.target.checked ? map : null)));
+
+            function updatePointStyles() {
+                cgmLayer.setStyle(f => {
+                    const cgm = f.getProperty('CGM'); const sel = document.getElementById('filtro-global-cgm').value;
+                    const isVis = sel === "TODOS" || (cgm && cgm.toUpperCase() === sel);
+                    return { fillColor: '#4AB5E0', fillOpacity: sel!=="TODOS"?0.4:0.25, strokeColor: '#19567C', strokeWeight: sel!=="TODOS"?4:3, visible: isVis };
                 });
             }
-
-            document.getElementById('cb-limite').addEventListener('change', (e) => {
-                const m = e.target.checked ? map : null;
-                limiteElements.forEach(el => el.setMap(m));
-            });
-
-            const toggleLayer = (id, layerInstance) => {
-                document.getElementById(id).addEventListener('change', (e) => { e.target.checked ? layerInstance.setMap(map) : layerInstance.setMap(null); });
-            };
-
-            toggleLayer('cb-cgm', cgmLayer); toggleLayer('cb-semaforos', semaforosLayer); toggleLayer('cb-reductores', reductoresLayer); toggleLayer('cb-solicitudes', solicitudesLayer);
-            toggleLayer('cb-yitos', yitosLayer); toggleLayer('cb-evg', evgLayer); toggleLayer('cb-autobuses', autobusesLayer); toggleLayer('cb-provinciales', provincialesLayer); toggleLayer('cb-nacionales', nacionalesLayer);
-            toggleLayer('cb-trafico', trafficLayer);
-            
-            document.getElementById('cb-streetview').addEventListener('change', (e) => { map.setOptions({ streetViewControl: e.target.checked }); });
-            document.getElementById('cb-incidentes').addEventListener('change', procesarYMostrarIncidentes);
-            document.querySelectorAll('input[name="tipo-visualizacion"]').forEach(radio => { radio.addEventListener('change', procesarYMostrarIncidentes); });
         }
     </script>
 </body>
