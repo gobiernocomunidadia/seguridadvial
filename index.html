@@ -44,18 +44,9 @@
             font-weight: 800; font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.4); cursor: pointer; width: 24px; height: 24px; transition: transform 0.2s;
         }
         .incident-cluster:hover { transform: scale(1.1); z-index: 999 !important; }
-        .pulse-cluster { animation: pulse-animation 1.5s infinite; }
-        @keyframes pulse-animation {
-            0% { box-shadow: 0 0 0 0 rgba(25, 86, 124, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(25, 86, 124, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(25, 86, 124, 0); }
-        }
 
         .incident-single { cursor: pointer; transition: transform 0.2s; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
         .incident-single:hover { transform: scale(1.3); z-index: 999 !important; }
-        
-        /* Estilos para los Sliders */
-        input[type=range] { accent-color: var(--acento); }
     </style>
 </head>
 <body class="flex flex-col">
@@ -125,19 +116,6 @@
                             </label>
                         </div>
 
-                        <div id="heatmap-controls" class="flex flex-col gap-2 mt-2 pl-7 p-3 bg-white border border-gray-300 rounded shadow-sm">
-                            <label class="text-[10px] font-bold text-[#19567C] uppercase flex justify-between">
-                                Tamaño de Nube (Radio) <span id="lbl-radius">35</span>
-                            </label>
-                            <input type="range" id="slider-radius" min="10" max="100" step="5" value="35" class="w-full cursor-pointer">
-                            
-                            <label class="text-[10px] font-bold text-[#19567C] uppercase mt-2 flex justify-between">
-                                Intensidad de Color <span id="lbl-intensity">10</span>
-                            </label>
-                            <input type="range" id="slider-intensity" min="1" max="50" step="1" value="10" class="w-full cursor-pointer">
-                            <p class="text-[9px] text-gray-500 italic mt-1 text-center">Deslizá para ajustar el difuminado</p>
-                        </div>
-
                         <div class="flex flex-col gap-1 mt-2 pl-7">
                             <label class="text-xs font-semibold text-gray-600">Filtrar por Mes/Año:</label>
                             <div id="container-mes-ano" class="custom-scrollbar max-h-32 overflow-y-auto bg-white border border-gray-300 rounded p-2 space-y-1.5 text-xs text-[#0F172A]">
@@ -157,25 +135,25 @@
                                 </label>
                                 <label class="flex items-center gap-2 cursor-pointer font-medium">
                                     <input type="checkbox" value="MADRUGADA" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
-                                    <span>Madrugada <span class="text-gray-400 text-[10px]">(0 a 6 hs)</span></span>
+                                    <span>Madrugada</span>
                                 </label>
                                 <label class="flex items-center gap-2 cursor-pointer font-medium">
                                     <input type="checkbox" value="MAÑANA" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
-                                    <span>Mañana <span class="text-gray-400 text-[10px]">(6 a 12 hs)</span></span>
+                                    <span>Mañana</span>
                                 </label>
                                 <label class="flex items-center gap-2 cursor-pointer font-medium">
                                     <input type="checkbox" value="TARDE" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
-                                    <span>Tarde <span class="text-gray-400 text-[10px]">(12 a 18 hs)</span></span>
+                                    <span>Tarde</span>
                                 </label>
                                 <label class="flex items-center gap-2 cursor-pointer font-medium">
                                     <input type="checkbox" value="NOCHE" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
-                                    <span>Noche <span class="text-gray-400 text-[10px]">(18 a 24 hs)</span></span>
+                                    <span>Noche</span>
                                 </label>
                             </div>
                         </div>
                     </div>
                 </div>
-
+                
             </div>
         </aside>
 
@@ -194,10 +172,10 @@
         let incidentDataTotal = [];
         let clusterOverlays = [];
         let heatmapLayer = null; 
+        
         let IncidentClusterOverlay; 
-
         let mesColorMap = {};
-        const coloresDisponibles = ['#19567C', '#D34872', '#4AB5E0', '#F59E0B', '#10B981', '#8B5CF6', '#F97316', '#06B6D4', '#EC4899', '#14B8A6'];
+        const coloresDisponibles = ['#19567C', '#D34872', '#4AB5E0', '#F59E0B', '#10B981', '#8B5CF6'];
 
         function startInfoWindowTimer() {
             if (infoWindowTimer) clearTimeout(infoWindowTimer);
@@ -248,7 +226,6 @@
                     } else {
                         this.div.className = 'incident-cluster';
                         this.div.style.backgroundColor = this.color;
-                        if (this.count > 5) this.div.classList.add('pulse-cluster');
                         this.div.innerHTML = this.count;
                     }
                     this.div.addEventListener('click', (e) => {
@@ -274,10 +251,9 @@
             };
 
             function mostrarPopupIncidente(position, address, count, fechas) {
-                const criticoHtml = count > 5 ? `<p style="margin: 4px 0; font-size: 12px; color: #19567C; font-weight: bold;"><i class="fa-solid fa-triangle-exclamation"></i> ¡Punto Crítico!</p>` : '';
                 const fechasList = fechas.map(f => `<li style="margin-bottom: 2px;">${f}</li>`).join('');
                 const fechasHtml = `<div style="margin-top: 10px;"><p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 700; color: #19567C;">Fechas Registradas:</p><div class="custom-scrollbar" style="max-height: 80px; overflow-y: auto; background-color: #F3F6F9; border-radius: 4px; padding: 4px 8px; border: 1px solid #E6EDF3;"><ul style="margin: 0; padding-left: 12px; color: #475569; font-size: 11px;">${fechasList}</ul></div></div>`;
-                const content = `<div style="font-family: 'Montserrat', sans-serif; min-width: 220px; position: relative;"><button onclick="window.closeInfoWindow()" class="custom-close-btn incident-close">&times;</button><h3 style="font-weight: 800; font-size: 14px; color: #19567C; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px; padding-right: 20px;">Zona de Incidentes</h3><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Dirección:</b> ${address}</p><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Total Registrados:</b> ${count}</p>${criticoHtml}${fechasHtml}</div>`;
+                const content = `<div style="font-family: 'Montserrat', sans-serif; min-width: 220px; position: relative;"><button onclick="window.closeInfoWindow()" class="custom-close-btn incident-close">&times;</button><h3 style="font-weight: 800; font-size: 14px; color: #19567C; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px; padding-right: 20px;">Zona de Incidentes</h3><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Dirección:</b> ${address}</p><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Total Registrados:</b> ${count}</p>${fechasHtml}</div>`;
                 infoWindow.setContent(content);
                 infoWindow.setPosition(position);
                 infoWindow.open(map);
@@ -291,7 +267,6 @@
                         const polys = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
                         polys.forEach(poly => poly.forEach(ring => {
                             const path = ring.map(coord => ({ lat: coord[1], lng: coord[0] }));
-                            // REDUJIMOS LA OPACIDAD PARA QUE NO TAPE EL HEATMAP
                             const p = new google.maps.Polygon({ paths: path, strokeOpacity: 0, fillColor: '#19567C', fillOpacity: 0.01, map: map, zIndex: 0 });
                             const l = new google.maps.Polyline({ path: path, strokeOpacity: 0, icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 }, offset: '0', repeat: '15px' }], strokeColor: '#19567C', strokeWeight: 3, map: map, zIndex: 1 });
                             limiteElements.push(p, l);
@@ -324,7 +299,7 @@
             }
 
             // -----------------------------------------------------
-            // LÓGICA DE INCIDENTES (MÉTODO CLÁSICO + SLIDERS EN VIVO)
+            // LÓGICA DE INCIDENTES (HEATMAP BASE, SIN MODIFICACIONES)
             // -----------------------------------------------------
             function limpiarVisualizaciones() {
                 clusterOverlays.forEach(o => o.setMap(null)); 
@@ -348,11 +323,12 @@
                 });
 
                 const tipoVista = document.querySelector('input[name="tipo-visualizacion"]:checked').value;
-                const esMultiMes = !cbMeses.includes('TODOS') && cbMeses.length > 1;
 
                 if (tipoVista === 'heatmap') {
                     
-                    let heatmapData = [];
+                    // AGRUPACIÓN NATIVA PARA EVITAR COLAPSO DE MEMORIA (WEIGHTS)
+                    let coordsDict = {};
+                    
                     data.forEach(r => {
                         let latStr = (r.Latitud||'').toString().replace(',', '.');
                         let lngStr = (r.Longitud||'').toString().replace(',', '.');
@@ -360,31 +336,40 @@
                         let lng = parseFloat(lngStr);
 
                         if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-                            heatmapData.push(new google.maps.LatLng(lat, lng));
+                            // Redondeamos para agrupar puntos súper cercanos
+                            let key = lat.toFixed(4) + "|" + lng.toFixed(4);
+                            if (!coordsDict[key]) {
+                                coordsDict[key] = { lat: lat, lng: lng, weight: 0 };
+                            }
+                            coordsDict[key].weight += 1;
                         }
                     });
 
-                    // Capturamos los valores de los sliders en vivo
-                    const valRadius = parseInt(document.getElementById('slider-radius').value);
-                    const valIntensity = parseInt(document.getElementById('slider-intensity').value);
+                    // Armamos el array de Google Maps WeightedLocation
+                    let heatmapData = [];
+                    for (let key in coordsDict) {
+                        heatmapData.push({
+                            location: new google.maps.LatLng(coordsDict[key].lat, coordsDict[key].lng),
+                            weight: coordsDict[key].weight
+                        });
+                    }
+
+                    console.log("[DEBUG] Puntos enviados al Heatmap (Agrupados):", heatmapData.length);
 
                     if (heatmapData.length > 0) {
+                        // CREACIÓN DEL MAPA DE CALOR CON AJUSTES POR DEFECTO (Color Nativo de Google)
                         heatmapLayer = new google.maps.visualization.HeatmapLayer({
                             data: heatmapData,
                             map: map,
-                            radius: valRadius,
-                            maxIntensity: valIntensity,
-                            gradient: [
-                                'rgba(0, 0, 0, 0)',         // Index 0 SIEMPRE debe ser transparente absoluto
-                                'rgba(74, 181, 224, 0.7)',  // Celeste
-                                'rgba(25, 86, 124, 0.9)',   // Azul 
-                                'rgba(211, 72, 114, 1)'     // Magenta
-                            ]
+                            radius: 35 // El único parámetro que dejamos es el tamaño de la mancha.
                         });
                     }
 
                 } else {
+                    // MODO PUNTOS CLÁSICO
                     let clusters = [];
+                    const esMultiMes = !cbMeses.includes('TODOS') && cbMeses.length > 1;
+
                     function getDistanceMeters(lat1, lon1, lat2, lon2) {
                         const R = 6371e3; const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180;
                         const Δφ = (lat2-lat1) * Math.PI/180; const Δλ = (lon2-lon1) * Math.PI/180;
@@ -413,6 +398,7 @@
                 }
             }
 
+            // CARGA CSV
             fetch('./seguridad_vial.csv')
                 .then(r => r.text())
                 .then(csvText => {
@@ -469,26 +455,12 @@
                     });
                 });
 
-            // LISTENERS DE INTERFAZ Y SLIDERS EN VIVO
-            document.querySelectorAll('input[name="tipo-visualizacion"]').forEach(r => {
-                r.addEventListener('change', (e) => {
-                    document.getElementById('heatmap-controls').style.display = (e.target.value === 'heatmap') ? 'flex' : 'none';
-                    procesarYMostrarIncidentes();
-                });
-            });
-
-            document.getElementById('slider-radius').addEventListener('input', (e) => {
-                document.getElementById('lbl-radius').innerText = e.target.value;
-                if (heatmapLayer) heatmapLayer.setOptions({ radius: parseInt(e.target.value) });
-            });
-            document.getElementById('slider-intensity').addEventListener('input', (e) => {
-                document.getElementById('lbl-intensity').innerText = e.target.value;
-                if (heatmapLayer) heatmapLayer.setOptions({ maxIntensity: parseInt(e.target.value) });
-            });
-
+            document.querySelectorAll('input[name="tipo-visualizacion"]').forEach(r => r.addEventListener('change', procesarYMostrarIncidentes));
             document.getElementById('cb-incidentes').addEventListener('change', procesarYMostrarIncidentes);
             document.getElementById('cb-limite').addEventListener('change', e => limiteElements.forEach(el => el.setMap(e.target.checked ? map : null)));
 
+            const toggleLayer = (id, layer) => document.getElementById(id).addEventListener('change', e => e.target.checked ? layer.setMap(map) : layer.setMap(null));
+            toggleLayer('cb-cgm', cgmLayer); 
         }
     </script>
 </body>
