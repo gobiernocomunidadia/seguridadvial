@@ -158,7 +158,7 @@
                     </h4>
                     <div class="space-y-3">
                         <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" id="cb-incidentes" class="w-4 h-4 accent-[#19567C]">
+                            <input type="checkbox" id="cb-incidentes" checked class="w-4 h-4 accent-[#19567C]">
                             <span class="text-sm text-[#0F172A] font-bold">Mapa de Incidentes</span>
                         </label>
                         
@@ -167,7 +167,7 @@
                                 <input type="radio" name="tipo-visualizacion" value="puntos" checked class="accent-[#19567C]"> Puntos
                             </label>
                             <label class="flex items-center gap-1 cursor-pointer">
-                                <input type="radio" name="tipo-visualizacion" value="heatmap" class="accent-[#19567C]"> Heatmap
+                                <input type="radio" name="tipo-visualizacion" value="heatmap" class="accent-[#19567C]"> Mapa de Calor
                             </label>
                         </div>
 
@@ -649,7 +649,7 @@
             trafficLayer = new google.maps.TrafficLayer();
 
             // -----------------------------------------------------
-            // LÓGICA DE INCIDENTES (CORREGIDA PARA MAPA DE CALOR)
+            // LÓGICA DE INCIDENTES (PUNTOS Y MAPA DE CALOR)
             // -----------------------------------------------------
 
             function getDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -709,9 +709,8 @@
                 const esMultiMes = !esTodosMeses && mesesSeleccionados.length > 1;
 
                 if (tipoVisualizacion === 'heatmap') {
-                    // Generación del set de datos LatLng explícitos
+                    // Generación robusta de objetos LatLng nativos para el Heatmap
                     const points = dataFiltrada.map(row => {
-                        // Limpieza preventiva de comas decimales regionales del CSV
                         let latStr = (row.Latitud || '').toString().trim().replace(',', '.');
                         let lngStr = (row.Longitud || '').toString().trim().replace(',', '.');
                         
@@ -721,30 +720,24 @@
                         return new google.maps.LatLng(lat, lng);
                     }).filter(latLng => latLng !== null);
 
-                    // Requerimiento Google Maps: se envuelven los puntos en un MVCArray
-                    const mvcArray = new google.maps.MVCArray(points);
-
-                    heatmapLayer = new google.maps.visualization.HeatmapLayer({
-                        data: mvcArray,
-                        map: map,
-                        radius: 35,
-                        // Gradiente de 13 pasos para asegurar la interpolación visible completa
-                        gradient: [
-                            'rgba(74, 181, 224, 0)',
-                            'rgba(74, 181, 224, 0.2)',
-                            'rgba(74, 181, 224, 0.4)',
-                            'rgba(74, 181, 224, 0.6)',
-                            'rgba(74, 181, 224, 0.8)',
-                            'rgba(25, 86, 124, 0.5)',
-                            'rgba(25, 86, 124, 0.7)',
-                            'rgba(25, 86, 124, 0.9)',
-                            'rgba(211, 72, 114, 0.5)',
-                            'rgba(211, 72, 114, 0.7)',
-                            'rgba(211, 72, 114, 0.85)',
-                            'rgba(211, 72, 114, 0.95)',
-                            'rgba(211, 72, 114, 1)'
-                        ]
-                    });
+                    if (points.length > 0) {
+                        heatmapLayer = new google.maps.visualization.HeatmapLayer({
+                            data: points,
+                            map: map,
+                            radius: 30,
+                            // Gradiente sólido interpolado con opacidad '1' en los núcleos visibles
+                            gradient: [
+                                'rgba(74, 181, 224, 0)',    
+                                'rgba(74, 181, 224, 1)',    
+                                'rgba(59, 150, 192, 1)',    
+                                'rgba(43, 118, 158, 1)',    
+                                'rgba(25, 86, 124, 1)',     
+                                'rgba(118, 79, 119, 1)',    
+                                'rgba(164, 75, 116, 1)',    
+                                'rgba(211, 72, 114, 1)'     
+                            ]
+                        });
+                    }
 
                 } else {
                     let clusters = [];
@@ -816,8 +809,20 @@
                             const mesesSet = new Set();
                             
                             incidentDataTotal.forEach(r => {
-                                r['Latitud'] = r['Lat'];
-                                r['Longitud'] = r['Lon'];
+                                // Captura e indexación de coordenadas tolerante a variaciones o espacios del CSV
+                                let latVal = r['Lat'] || r['lat'] || r['Latitud'] || r['latitud'] || '';
+                                let lngVal = r['Lon'] || r['lon'] || r['Longitud'] || r['longitud'] || r['Lng'] || r['lng'] || '';
+                                
+                                if (latVal === '' || lngVal === '') {
+                                    for (let key in r) {
+                                        let cleanK = key.trim().toLowerCase();
+                                        if (cleanK === 'lat' || cleanK === 'latitud') latVal = r[key];
+                                        if (cleanK === 'lon' || cleanK === 'lng' || cleanK === 'longitud') lngVal = r[key];
+                                    }
+                                }
+
+                                r['Latitud'] = latVal.toString().trim().replace(',', '.');
+                                r['Longitud'] = lngVal.toString().trim().replace(',', '.');
 
                                 if (r['Fecha']) {
                                     const parts = r['Fecha'].split('-');
@@ -882,7 +887,7 @@
                                 procesarYMostrarIncidentes();
                             });
 
-                            // Renderizado reactivo inmediato inicial
+                            // Forzar renderizado inicial automático al cargar
                             procesarYMostrarIncidentes();
                         }
                     });
