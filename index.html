@@ -135,19 +135,19 @@
                                 </label>
                                 <label class="flex items-center gap-2 cursor-pointer font-medium">
                                     <input type="checkbox" value="MADRUGADA" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
-                                    <span>Madrugada</span>
+                                    <span>Madrugada <span class="text-gray-400 text-[10px]">(0 a 6 hs)</span></span>
                                 </label>
                                 <label class="flex items-center gap-2 cursor-pointer font-medium">
                                     <input type="checkbox" value="MAÑANA" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
-                                    <span>Mañana</span>
+                                    <span>Mañana <span class="text-gray-400 text-[10px]">(6 a 12 hs)</span></span>
                                 </label>
                                 <label class="flex items-center gap-2 cursor-pointer font-medium">
                                     <input type="checkbox" value="TARDE" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
-                                    <span>Tarde</span>
+                                    <span>Tarde <span class="text-gray-400 text-[10px]">(12 a 18 hs)</span></span>
                                 </label>
                                 <label class="flex items-center gap-2 cursor-pointer font-medium">
                                     <input type="checkbox" value="NOCHE" class="cb-horario w-3.5 h-3.5 accent-[#19567C]">
-                                    <span>Noche</span>
+                                    <span>Noche <span class="text-gray-400 text-[10px]">(18 a 24 hs)</span></span>
                                 </label>
                             </div>
                         </div>
@@ -170,6 +170,22 @@
                     </div>
                 </div>
 
+                <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
+                    <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-1 flex items-center gap-2">
+                        <i data-lucide="bus" class="h-4 w-4"></i> Colectivos
+                    </h4>
+                    <div class="space-y-3 mb-4">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-yitos" class="w-4 h-4 accent-[#19567C]">
+                            <span class="text-sm text-[#0F172A] font-bold">Empresa Yitos</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-evg" class="w-4 h-4 accent-[#19567C]">
+                            <span class="text-sm text-[#0F172A] font-bold">Empresa EVG</span>
+                        </label>
+                    </div>
+                </div>
+
             </div>
         </aside>
 
@@ -178,27 +194,24 @@
         </div>
     </main>
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2MHti5Cy4IDKPc3Iu0ypNQg_BgsjcMoQ&libraries=visualization&v=3.64&callback=initMap" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2MHti5Cy4IDKPc3Iu0ypNQg_BgsjcMoQ&callback=initMap" async defer></script>
 
     <script>
         let map, infoWindow, infoWindowTimer; 
-        let cgmLayer, semaforosLayer, reductoresLayer; 
+        let cgmLayer, semaforosLayer, reductoresLayer, yitosLayer, evgLayer; 
         let limitePolygons = []; 
         let limitePolylines = [];
         
         let incidentDataTotal = [];
         let clusterOverlays = [];
-        let heatmapLayer = null; 
-        let heatmapsMulti = []; 
         
+        // Nuestro nuevo motor personalizado
+        let heatmapOverlays = []; 
         let IncidentClusterOverlay; 
+        let CSSHeatmapOverlay; 
+
         let mesColorMap = {};
         const coloresDisponibles = ['#19567C', '#D34872', '#4AB5E0', '#F59E0B', '#10B981', '#8B5CF6'];
-
-        function hexToRgb(hex) {
-            let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : {r: 25, g: 86, b: 124};
-        }
 
         function startInfoWindowTimer() {
             if (infoWindowTimer) clearTimeout(infoWindowTimer);
@@ -230,6 +243,9 @@
                 mapTypeControl: false, streetViewControl: false
             });
 
+            // -----------------------------------------------------------
+            // 1. CLASE: PUNTOS INDIVIDUALES Y CLUSTERS CLÁSICOS
+            // -----------------------------------------------------------
             IncidentClusterOverlay = class extends google.maps.OverlayView {
                 constructor(position, count, address, mapInstance, fechas, color) {
                     super();
@@ -254,7 +270,7 @@
                         mostrarPopupIncidente(this.position, this.address, this.count, this.fechas);
                     });
                     const panes = this.getPanes();
-                    panes.overlayMouseTarget.appendChild(this.div);
+                    panes.overlayMouseTarget.appendChild(this.div); // Clickable layer
                 }
                 draw() {
                     if (!this.div) return;
@@ -264,6 +280,76 @@
                     this.div.style.left = (pos.x - size/2) + 'px'; this.div.style.top = (pos.y - size/2) + 'px';
                 }
                 onRemove() { if (this.div) { this.div.parentNode.removeChild(this.div); this.div = null; } }
+            };
+
+            // -----------------------------------------------------------
+            // 2. CLASE NUEVA: MOTOR DE CALOR PERSONALIZADO (A prueba de fallos)
+            // -----------------------------------------------------------
+            CSSHeatmapOverlay = class extends google.maps.OverlayView {
+                constructor(position, count, mapInstance, esMultiMes, colorAsignado) {
+                    super();
+                    this.position = position;
+                    this.count = count;
+                    this.esMultiMes = esMultiMes;
+                    this.colorAsignado = colorAsignado;
+                    this.div = null;
+                    this.setMap(mapInstance);
+                }
+                onAdd() {
+                    this.div = document.createElement('div');
+                    this.div.style.position = 'absolute';
+                    this.div.style.pointerEvents = 'none'; // Importante para no tapar los clicks del mapa
+                    this.div.style.transform = 'translate(-50%, -50%)';
+                    
+                    // Cálculo de Colores
+                    let r, g, b;
+                    if (this.esMultiMes) {
+                        let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(this.colorAsignado || '#19567C');
+                        r = result ? parseInt(result[1], 16) : 25;
+                        g = result ? parseInt(result[2], 16) : 86;
+                        b = result ? parseInt(result[3], 16) : 124;
+                    } else {
+                        // Gradiente progresivo: Celeste -> Azul -> Magenta
+                        let intensity = Math.min(1.0, this.count / 12);
+                        if (intensity < 0.5) {
+                            let f = intensity * 2;
+                            r = Math.round(74 + f * (25 - 74));
+                            g = Math.round(181 + f * (86 - 181));
+                            b = Math.round(224 + f * (124 - 224));
+                        } else {
+                            let f = (intensity - 0.5) * 2;
+                            r = Math.round(25 + f * (211 - 25));
+                            g = Math.round(86 + f * (72 - 86));
+                            b = Math.round(124 + f * (114 - 124));
+                        }
+                    }
+                    
+                    // Nivel de intensidad y desenfoque (Efecto Nube de calor)
+                    let alpha = Math.min(0.85, 0.2 + (this.count * 0.08));
+                    this.div.style.background = `radial-gradient(circle, rgba(${r},${g},${b},${alpha}) 0%, rgba(${r},${g},${b},0) 65%)`;
+                    this.div.style.mixBlendMode = 'multiply'; // Hace que los colores se fusionen intensamente al chocar
+                    
+                    const panes = this.getPanes();
+                    panes.overlayLayer.appendChild(this.div); // Layer visual de fondo
+                }
+                draw() {
+                    if (!this.div) return;
+                    const zoom = this.getMap().getZoom();
+                    const pos = this.getProjection().fromLatLngToDivPixel(this.position);
+                    
+                    // Escalado dinámico: se agranda al hacer zoom, igual que la geografía real
+                    let scale = Math.max(0.3, (zoom - 10) / 3); 
+                    let baseSize = 100 + Math.min(this.count * 15, 120); 
+                    let finalSize = baseSize * scale;
+                    
+                    this.div.style.width = finalSize + 'px';
+                    this.div.style.height = finalSize + 'px';
+                    this.div.style.left = pos.x + 'px';
+                    this.div.style.top = pos.y + 'px';
+                }
+                onRemove() {
+                    if (this.div) { this.div.parentNode.removeChild(this.div); this.div = null; }
+                }
             };
 
             function mostrarPopupIncidente(position, address, count, fechas) {
@@ -276,6 +362,7 @@
                 startInfoWindowTimer(); 
             }
 
+            // CARGAS GEOGRÁFICAS
             fetch('./municipios_Lomas de Zamora.geojson').then(r => r.json()).then(geoJson => {
                 geoJson.features.forEach(feature => {
                     const polys = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
@@ -329,13 +416,13 @@
             }
 
             // -----------------------------------------------------
-            // LÓGICA DE INCIDENTES (CALIBRACIÓN FINA DEL GRADIENTE)
+            // PROCESAMIENTO E INYECCIÓN DE DATOS
             // -----------------------------------------------------
             function limpiarVisualizaciones() {
                 clusterOverlays.forEach(o => o.setMap(null)); 
                 clusterOverlays = [];
-                if (heatmapLayer) { heatmapLayer.setMap(null); heatmapLayer = null; }
-                heatmapsMulti.forEach(hm => hm.setMap(null)); heatmapsMulti = [];
+                heatmapOverlays.forEach(hm => hm.setMap(null)); 
+                heatmapOverlays = [];
             }
 
             function procesarYMostrarIncidentes() {
@@ -358,80 +445,30 @@
                 const esMultiMes = !cbMeses.includes('TODOS') && cbMeses.length > 1;
 
                 if (tipoVista === 'heatmap') {
-                    
-                    let coordsDict = {};
-                    data.forEach(r => {
-                        let latStr = (r.Latitud||'').toString().replace(',', '.');
-                        let lngStr = (r.Longitud||'').toString().replace(',', '.');
-                        let lat = parseFloat(latStr); let lng = parseFloat(lngStr);
-
+                    // AGRUPACIÓN MATEMÁTICA RÁPIDA PARA EL HEATMAP (Grid Binning 40mts)
+                    let cuadricula = {};
+                    data.forEach(row => {
+                        let latStr = (row.Latitud||'').toString().replace(',', '.');
+                        let lngStr = (row.Longitud||'').toString().replace(',', '.');
+                        const lat = parseFloat(latStr); const lng = parseFloat(lngStr);
                         if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-                            let key = lat.toFixed(4) + "|" + lng.toFixed(4) + "|" + r['Mes/Año'];
-                            if (!coordsDict[key]) {
-                                coordsDict[key] = { lat: lat, lng: lng, mes: r['Mes/Año'], weight: 0 };
+                            let gridLat = (Math.round(lat / 0.0004) * 0.0004).toFixed(5);
+                            let gridLng = (Math.round(lng / 0.0004) * 0.0004).toFixed(5);
+                            let key = gridLat + "|" + gridLng + (esMultiMes ? "|" + row['Mes/Año'] : "");
+                            
+                            if (!cuadricula[key]) {
+                                cuadricula[key] = { lat: parseFloat(gridLat), lng: parseFloat(gridLng), count: 0, mes: row['Mes/Año'] };
                             }
-                            coordsDict[key].weight += 1;
+                            cuadricula[key].count += 1;
                         }
                     });
 
-                    if (esMultiMes) {
-                        cbMeses.forEach(mes => {
-                            const rgb = hexToRgb(mesColorMap[mes] || '#19567C');
-                            let heatmapData = [];
-                            
-                            for (let key in coordsDict) {
-                                if (coordsDict[key].mes === mes) {
-                                    heatmapData.push({
-                                        location: new google.maps.LatLng(coordsDict[key].lat, coordsDict[key].lng),
-                                        weight: coordsDict[key].weight
-                                    });
-                                }
-                            }
-
-                            if (heatmapData.length > 0) {
-                                const capa = new google.maps.visualization.HeatmapLayer({
-                                    data: heatmapData,
-                                    map: map,
-                                    radius: 50, // Radio suavizado
-                                    maxIntensity: 15, // Intensidad aumentada para evitar bordes duros
-                                    gradient: [
-                                        'rgba(0, 0, 0, 0)',
-                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`, // Transiciones ultra suaves
-                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`,
-                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`,
-                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.9)`,
-                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`
-                                    ]
-                                });
-                                heatmapsMulti.push(capa);
-                            }
-                        });
-                    } else {
-                        let heatmapData = [];
-                        for (let key in coordsDict) {
-                            heatmapData.push({
-                                location: new google.maps.LatLng(coordsDict[key].lat, coordsDict[key].lng),
-                                weight: coordsDict[key].weight
-                            });
-                        }
-
-                        if (heatmapData.length > 0) {
-                            heatmapLayer = new google.maps.visualization.HeatmapLayer({
-                                data: heatmapData,
-                                map: map,
-                                radius: 50, // Radio suavizado
-                                maxIntensity: 15, // Intensidad aumentada para permitir un degradado gradual
-                                gradient: [
-                                    'rgba(0, 0, 0, 0)',
-                                    'rgba(74, 181, 224, 0.1)', // Pasos mucho más progresivos
-                                    'rgba(74, 181, 224, 0.3)', 
-                                    'rgba(74, 181, 224, 0.6)', 
-                                    'rgba(25, 86, 124, 0.8)',  
-                                    'rgba(25, 86, 124, 1)',  
-                                    'rgba(211, 72, 114, 1)'    
-                                ]
-                            });
-                        }
+                    // Generamos nuestro propio mapa de calor inmune a Google
+                    for (let key in cuadricula) {
+                        let cell = cuadricula[key];
+                        let colorAsignado = (esMultiMes && mesColorMap[cell.mes]) ? mesColorMap[cell.mes] : null;
+                        let hm = new CSSHeatmapOverlay(new google.maps.LatLng(cell.lat, cell.lng), cell.count, map, esMultiMes, colorAsignado);
+                        heatmapOverlays.push(hm);
                     }
 
                 } else {
