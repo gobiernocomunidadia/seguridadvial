@@ -245,8 +245,6 @@
         let incidentDataTotal = [];
         let clusterOverlays = [];
         let heatmapLayer = null; 
-        let heatmaps = []; 
-        
         let IncidentClusterOverlay; 
 
         let mesColorMap = {};
@@ -254,11 +252,6 @@
             '#19567C', '#D34872', '#4AB5E0', '#F59E0B', '#10B981', 
             '#8B5CF6', '#F97316', '#06B6D4', '#EC4899', '#14B8A6'
         ];
-
-        function hexToRgb(hex) {
-            let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : {r: 25, g: 86, b: 124};
-        }
 
         function startInfoWindowTimer() {
             if (infoWindowTimer) clearTimeout(infoWindowTimer);
@@ -410,14 +403,13 @@
             map.addListener('zoom_changed', updatePointStyles);
 
             // -----------------------------------------------------
-            // LÓGICA DE INCIDENTES: AGRUPACIÓN SEGURA Y DIFUMINADO
+            // LÓGICA DE INCIDENTES (AGRUPACIÓN ESPACIAL SEGURA)
             // -----------------------------------------------------
 
             function limpiarVisualizaciones() {
                 clusterOverlays.forEach(o => o.setMap(null)); 
                 clusterOverlays = [];
                 if (heatmapLayer) { heatmapLayer.setMap(null); heatmapLayer = null; }
-                heatmaps.forEach(hm => hm.setMap(null)); heatmaps = [];
             }
 
             function procesarYMostrarIncidentes() {
@@ -436,86 +428,78 @@
                 });
 
                 const tipoVista = document.querySelector('input[name="tipo-visualizacion"]:checked').value;
-                const esMultiMes = !cbMeses.includes('TODOS') && cbMeses.length > 1;
-
-                // Pre-Agrupación Matemática (El escudo contra el Crash de WebGL)
-                let clusters = [];
-                function getDistanceMeters(lat1, lon1, lat2, lon2) {
-                    const R = 6371e3; const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180;
-                    const Δφ = (lat2-lat1) * Math.PI/180; const Δλ = (lon2-lon1) * Math.PI/180;
-                    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-                    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
-                }
-
-                data.forEach(row => {
-                    let latStr = (row.Latitud||'').toString().replace(',', '.');
-                    let lngStr = (row.Longitud||'').toString().replace(',', '.');
-                    const lat = parseFloat(latStr); const lng = parseFloat(lngStr);
-                    if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
-                    
-                    let found = clusters.find(c => (!esMultiMes || c.mes === row['Mes/Año']) && getDistanceMeters(lat, lng, c.lat, c.lng) <= 30);
-                    const fecha = (row.Fecha_Creacion_dt || '') + (row.FranjaHoraria !== 'DESCONOCIDO' ? ` (${row.FranjaHoraria})` : '');
-
-                    if (found) { found.count++; found.fechas.push(fecha); } 
-                    else { clusters.push({ lat: lat, lng: lng, count: 1, direccion: row.direccion_normalizada || 'Desconocida', fechas: [fecha], mes: row['Mes/Año'] }); }
-                });
 
                 if (tipoVista === 'heatmap') {
-                    try {
-                        if (esMultiMes) {
-                            cbMeses.forEach(mes => {
-                                const rgb = hexToRgb(mesColorMap[mes] || '#19567C');
-                                
-                                // Envío de Puntos Ponderados (Weight)
-                                const puntosPonderados = clusters.filter(c => c.mes === mes).map(c => {
-                                    return { location: new google.maps.LatLng(c.lat, c.lng), weight: c.count };
-                                });
-
-                                if (puntosPonderados.length > 0) {
-                                    const capa = new google.maps.visualization.HeatmapLayer({
-                                        data: puntosPonderados,
-                                        map: map,
-                                        radius: 30, // Calibrado a difuminado QGIS
-                                        maxIntensity: 10,
-                                        opacity: 0.9,
-                                        gradient: [
-                                            'rgba(0, 0, 0, 0)',
-                                            `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`,
-                                            `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.7)`,
-                                            `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`
-                                        ]
-                                    });
-                                    heatmaps.push(capa);
-                                }
-                            });
-                        } else {
-                            
-                            const puntosPonderados = clusters.map(c => {
-                                return { location: new google.maps.LatLng(c.lat, c.lng), weight: c.count };
-                            });
-
-                            if (puntosPonderados.length > 0) {
-                                heatmapLayer = new google.maps.visualization.HeatmapLayer({
-                                    data: puntosPonderados,
-                                    map: map,
-                                    radius: 30, // <-- Ajustado para crear el aura sin tapar todo Lomas
-                                    maxIntensity: 10, // <-- Alcanza el color magenta de forma suave
-                                    opacity: 0.9,
-                                    gradient: [
-                                        'rgba(0, 0, 0, 0)',
-                                        'rgba(74, 181, 224, 0)',   
-                                        'rgba(74, 181, 224, 0.7)', 
-                                        'rgba(25, 86, 124, 0.9)',  
-                                        'rgba(211, 72, 114, 1)'    
-                                    ]
-                                });
+                    // LA NUEVA ESTRATEGIA: AGRUPACIÓN POR CUADRÍCULA (Grid Binning)
+                    // En lugar de 7000 puntos, reducimos la carga agrupando coordenadas a 3 decimales (aprox. 100m)
+                    let cuadricula = {};
+                    
+                    data.forEach(row => {
+                        let latStr = (row.Latitud||'').toString().replace(',', '.');
+                        let lngStr = (row.Longitud||'').toString().replace(',', '.');
+                        const lat = parseFloat(latStr); 
+                        const lng = parseFloat(lngStr);
+                        
+                        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+                            // toFixed(3) asegura que incidentes en la misma manzana sean 1 solo punto matemáticamente
+                            let key = lat.toFixed(3) + "|" + lng.toFixed(3);
+                            if (!cuadricula[key]) {
+                                cuadricula[key] = { lat: parseFloat(lat.toFixed(3)), lng: parseFloat(lng.toFixed(3)), count: 0 };
                             }
+                            cuadricula[key].count += 1;
                         }
-                    } catch (error) {
-                        console.error(error);
+                    });
+
+                    // Construimos la matriz limpia para Google Maps
+                    let puntosPonderados = [];
+                    for (let key in cuadricula) {
+                        puntosPonderados.push({
+                            location: new google.maps.LatLng(cuadricula[key].lat, cuadricula[key].lng),
+                            weight: cuadricula[key].count
+                        });
+                    }
+
+                    if (puntosPonderados.length > 0) {
+                        heatmapLayer = new google.maps.visualization.HeatmapLayer({
+                            data: puntosPonderados,
+                            map: map,
+                            radius: 35, // El tamaño de la nube
+                            maxIntensity: 12, // Evita que se diluya si una manzana tiene mucho peso
+                            opacity: 0.8,
+                            gradient: [
+                                'rgba(248, 250, 252, 0)', // Fondo transparente seguro
+                                'rgba(74, 181, 224, 0.8)', // Celeste Suave
+                                'rgba(25, 86, 124, 0.9)',  // Azul Institucional
+                                'rgba(211, 72, 114, 1)'    // Magenta
+                            ]
+                        });
                     }
 
                 } else {
+                    // VISTA DE PUNTOS
+                    const esMultiMes = !cbMeses.includes('TODOS') && cbMeses.length > 1;
+                    let clusters = [];
+                    
+                    function getDistanceMeters(lat1, lon1, lat2, lon2) {
+                        const R = 6371e3; const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180;
+                        const Δφ = (lat2-lat1) * Math.PI/180; const Δλ = (lon2-lon1) * Math.PI/180;
+                        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+                        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
+                    }
+
+                    data.forEach(row => {
+                        let latStr = (row.Latitud||'').toString().replace(',', '.');
+                        let lngStr = (row.Longitud||'').toString().replace(',', '.');
+                        const lat = parseFloat(latStr); const lng = parseFloat(lngStr);
+                        if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
+                        
+                        let found = clusters.find(c => (!esMultiMes || c.mes === row['Mes/Año']) && getDistanceMeters(lat, lng, c.lat, c.lng) <= 30);
+                        const fecha = (row.Fecha_Creacion_dt || '') + (row.FranjaHoraria !== 'DESCONOCIDO' ? ` (${row.FranjaHoraria})` : '');
+
+                        if (found) { found.count++; found.fechas.push(fecha); } 
+                        else { clusters.push({ lat: lat, lng: lng, count: 1, direccion: row.direccion_normalizada || 'Desconocida', fechas: [fecha], mes: row['Mes/Año'] }); }
+                    });
+
                     clusters.forEach(c => {
                         let colorHex = '#19567C'; 
                         if (esMultiMes && mesColorMap[c.mes]) colorHex = mesColorMap[c.mes];
