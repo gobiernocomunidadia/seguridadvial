@@ -244,7 +244,7 @@
         
         let incidentDataTotal = [];
         let clusterOverlays = [];
-        let heatmapLayer = null; // Capa única de calor
+        let heatmapLayer = null; // Capa unificada
         
         let IncidentClusterOverlay; 
 
@@ -347,15 +347,15 @@
                 startInfoWindowTimer(); 
             }
 
-            // CARGAS GEOGRÁFICAS BÁSICAS
+            // CARGAS GEOGRÁFICAS BÁSICAS (Límite con zIndex 0 para no tapar el Heatmap)
             fetch('./municipios_Lomas de Zamora.geojson').then(r => r.json()).then(geoJson => {
                 geoJson.features.forEach(feature => {
                     if (feature.geometry.type === 'MultiPolygon' || feature.geometry.type === 'Polygon') {
                         const polys = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
                         polys.forEach(poly => poly.forEach(ring => {
                             const path = ring.map(coord => ({ lat: coord[1], lng: coord[0] }));
-                            const p = new google.maps.Polygon({ paths: path, strokeOpacity: 0, fillColor: '#19567C', fillOpacity: 0.03, map: map, zIndex: 2 });
-                            const l = new google.maps.Polyline({ path: path, strokeOpacity: 0, icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 }, offset: '0', repeat: '15px' }], strokeColor: '#19567C', strokeWeight: 3, map: map, zIndex: 3 });
+                            const p = new google.maps.Polygon({ paths: path, strokeOpacity: 0, fillColor: '#19567C', fillOpacity: 0.03, map: map, zIndex: 0 }); // zIndex ajustado
+                            const l = new google.maps.Polyline({ path: path, strokeOpacity: 0, icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 }, offset: '0', repeat: '15px' }], strokeColor: '#19567C', strokeWeight: 3, map: map, zIndex: 1 });
                             limiteElements.push(p, l);
                         }));
                     }
@@ -405,19 +405,16 @@
             map.addListener('zoom_changed', updatePointStyles);
 
             // -----------------------------------------------------
-            // LÓGICA CENTRAL DE INCIDENTES 
+            // LÓGICA DE INCIDENTES (HEATMAP CLÁSICO SIN PESOS)
             // -----------------------------------------------------
-            function getDistanceMeters(lat1, lon1, lat2, lon2) {
-                const R = 6371e3; const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180;
-                const Δφ = (lat2-lat1) * Math.PI/180; const Δλ = (lon2-lon1) * Math.PI/180;
-                const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-                return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
-            }
 
             function limpiarVisualizaciones() {
                 clusterOverlays.forEach(o => o.setMap(null)); 
                 clusterOverlays = [];
-                if (heatmapLayer) { heatmapLayer.setMap(null); heatmapLayer = null; }
+                if (heatmapLayer) { 
+                    heatmapLayer.setMap(null); 
+                    heatmapLayer = null; 
+                }
             }
 
             function procesarYMostrarIncidentes() {
@@ -428,6 +425,7 @@
                 const cbHoras = Array.from(document.querySelectorAll('.cb-horario:checked')).map(cb => cb.value);
                 const globalCgm = document.getElementById('filtro-global-cgm').value;
 
+                // Filtrar Data Base
                 let data = incidentDataTotal.filter(d => {
                     if (!cbMeses.includes('TODOS') && !cbMeses.includes(d['Mes/Año'])) return false;
                     if (!cbHoras.includes('TODOS') && !cbHoras.includes(d['FranjaHoraria'])) return false;
@@ -438,53 +436,69 @@
                 const tipoVista = document.querySelector('input[name="tipo-visualizacion"]:checked').value;
                 const esMultiMes = !cbMeses.includes('TODOS') && cbMeses.length > 1;
 
-                // PASO 1: Agrupar coordenadas exactas y cercanas para EVITAR el crash de Google Maps
-                let clusters = [];
-                data.forEach(row => {
-                    let latStr = (row.Latitud||'').toString().replace(',', '.');
-                    let lngStr = (row.Longitud||'').toString().replace(',', '.');
-                    const lat = parseFloat(latStr); const lng = parseFloat(lngStr);
-                    if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
-                    
-                    let found = clusters.find(c => (!esMultiMes || c.mes === row['Mes/Año']) && getDistanceMeters(lat, lng, c.lat, c.lng) <= 30);
-                    const fecha = (row.Fecha_Creacion_dt || '') + (row.FranjaHoraria !== 'DESCONOCIDO' ? ` (${row.FranjaHoraria})` : '');
-
-                    if (found) { 
-                        found.count++; 
-                        found.fechas.push(fecha); 
-                    } else { 
-                        clusters.push({ lat: lat, lng: lng, count: 1, direccion: row.direccion_normalizada || 'Desconocida', fechas: [fecha], mes: row['Mes/Año'] }); 
-                    }
-                });
-
-                // PASO 2: Dibujar según selección
                 if (tipoVista === 'heatmap') {
-                    // LA CLAVE PARA EL HEATMAP: Utilizar "WeightedLocation"
-                    // En lugar de enviar 7000 puntos repetidos, enviamos los clusters con su "peso" real.
-                    const puntosPonderados = clusters.map(c => {
-                        return {
-                            location: new google.maps.LatLng(c.lat, c.lng),
-                            weight: c.count // <- Esto soluciona el colapso del mapa
-                        };
-                    });
+                    
+                    try {
+                        // 1. Extraemos los LatLng puros (si hay 30 choques iguales, empujamos 30 puntos idénticos)
+                        let heatmapData = [];
+                        data.forEach(r => {
+                            let latStr = (r.Latitud||'').toString().replace(',', '.');
+                            let lngStr = (r.Longitud||'').toString().replace(',', '.');
+                            let lat = parseFloat(latStr);
+                            let lng = parseFloat(lngStr);
 
-                    if (puntosPonderados.length > 0) {
-                        heatmapLayer = new google.maps.visualization.HeatmapLayer({
-                            data: puntosPonderados,
-                            map: map,
-                            radius: 35,
-                            gradient: [
-                                'rgba(255, 255, 255, 0)',  
-                                'rgba(74, 181, 224, 1)',    
-                                'rgba(25, 86, 124, 1)',     
-                                'rgba(211, 72, 114, 1)'     
-                            ]
+                            if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+                                heatmapData.push(new google.maps.LatLng(lat, lng));
+                            }
                         });
-                        console.log(`[DEBUG] Heatmap dibujado con éxito usando ${puntosPonderados.length} áreas ponderadas.`);
+
+                        console.log(`Puntos enviados al Heatmap: ${heatmapData.length}`);
+
+                        if (heatmapData.length > 0) {
+                            heatmapLayer = new google.maps.visualization.HeatmapLayer({
+                                data: heatmapData,
+                                map: map,
+                                radius: 25, 
+                                maxIntensity: 10, // Topamos la intensidad para que no opaque los puntos chicos
+                                gradient: [
+                                    'rgba(0, 0, 0, 0)',
+                                    'rgba(74, 181, 224, 0.4)',
+                                    'rgba(74, 181, 224, 0.8)',
+                                    'rgba(25, 86, 124, 0.5)',
+                                    'rgba(25, 86, 124, 0.9)',
+                                    'rgba(211, 72, 114, 0.8)',
+                                    'rgba(211, 72, 114, 1)'
+                                ]
+                            });
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        alert("Error de Google Maps al dibujar el mapa de calor: " + error.message);
                     }
 
                 } else {
-                    // Dibujar Puntos Nativos
+                    // Lógica de Puntos / Clusters visuales
+                    let clusters = [];
+                    function getDistanceMeters(lat1, lon1, lat2, lon2) {
+                        const R = 6371e3; const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180;
+                        const Δφ = (lat2-lat1) * Math.PI/180; const Δλ = (lon2-lon1) * Math.PI/180;
+                        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+                        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
+                    }
+
+                    data.forEach(row => {
+                        let latStr = (row.Latitud||'').toString().replace(',', '.');
+                        let lngStr = (row.Longitud||'').toString().replace(',', '.');
+                        const lat = parseFloat(latStr); const lng = parseFloat(lngStr);
+                        if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
+                        
+                        let found = clusters.find(c => (!esMultiMes || c.mes === row['Mes/Año']) && getDistanceMeters(lat, lng, c.lat, c.lng) <= 30);
+                        const fecha = (row.Fecha_Creacion_dt || '') + (row.FranjaHoraria !== 'DESCONOCIDO' ? ` (${row.FranjaHoraria})` : '');
+
+                        if (found) { found.count++; found.fechas.push(fecha); } 
+                        else { clusters.push({ lat: lat, lng: lng, count: 1, direccion: row.direccion_normalizada || 'Desconocida', fechas: [fecha], mes: row['Mes/Año'] }); }
+                    });
+
                     clusters.forEach(c => {
                         let colorHex = '#19567C'; 
                         if (esMultiMes && mesColorMap[c.mes]) colorHex = mesColorMap[c.mes];
@@ -493,7 +507,7 @@
                 }
             }
 
-            // CARGA CSV PRINCIPAL Y SANITIZACIÓN
+            // CARGA CSV PRINCIPAL
             fetch('./seguridad_vial.csv')
                 .then(r => r.text())
                 .then(csvText => {
