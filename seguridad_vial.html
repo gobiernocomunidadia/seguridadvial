@@ -66,7 +66,6 @@
 
         /* Estilos para Clústeres de Incidentes (Múltiples) */
         .incident-cluster {
-            background-color: var(--azul-inst);
             color: white;
             border: 2px solid white;
             border-radius: 50%;
@@ -87,7 +86,6 @@
         }
         /* Efecto Latir para Críticos */
         .pulse-cluster {
-            background-color: var(--azul-inst);
             animation: pulse-animation 1.5s infinite;
         }
         @keyframes pulse-animation {
@@ -137,7 +135,7 @@
                     </h4>
                     <select id="filtro-global-cgm" class="w-full text-xs p-2 border border-[#19567C]/30 rounded focus:outline-none focus:border-[#19567C] font-semibold text-[#0F172A] cursor-pointer">
                         <option value="TODOS">TODOS LOS CGM</option>
-                        </select>
+                    </select>
                 </div>
 
                 <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
@@ -165,11 +163,24 @@
                             <input type="checkbox" id="cb-incidentes" class="w-4 h-4 accent-[#19567C]">
                             <span class="text-sm text-[#0F172A] font-bold">Mapa de Incidentes</span>
                         </label>
+                        
+                        <div class="flex gap-4 mt-1 pl-7 text-xs font-bold text-gray-700">
+                            <label class="flex items-center gap-1 cursor-pointer">
+                                <input type="radio" name="tipo-visualizacion" value="puntos" checked class="accent-[#19567C]"> Puntos
+                            </label>
+                            <label class="flex items-center gap-1 cursor-pointer">
+                                <input type="radio" name="tipo-visualizacion" value="heatmap" class="accent-[#19567C]"> Mapa de Calor
+                            </label>
+                        </div>
+
                         <div class="flex flex-col gap-1 mt-2 pl-7">
                             <label class="text-xs font-semibold text-gray-600">Filtrar por Mes/Año:</label>
-                            <select id="select-mes-ano" class="w-full text-xs p-1.5 border border-gray-300 rounded focus:outline-none focus:border-[#19567C]">
-                                <option value="TODOS">Todos los meses</option>
-                                </select>
+                            <div id="container-mes-ano" class="custom-scrollbar max-h-36 overflow-y-auto bg-white border border-gray-300 rounded p-2 space-y-1.5 text-xs text-[#0F172A]">
+                                <label class="flex items-center gap-2 cursor-pointer font-bold border-b pb-1 mb-1">
+                                    <input type="checkbox" value="TODOS" id="cb-mes-todos" checked class="cb-mes-ano w-3.5 h-3.5 accent-[#19567C]">
+                                    <span>Todos los meses</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -261,7 +272,7 @@
 
     </main>
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2MHti5Cy4IDKPc3Iu0ypNQg_BgsjcMoQ&callback=initMap" defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2MHti5Cy4IDKPc3Iu0ypNQg_BgsjcMoQ&libraries=visualization&callback=initMap" defer></script>
 
     <script>
         let map, trafficLayer, infoWindow;
@@ -274,7 +285,15 @@
         // Variables para Incidentes
         let incidentDataTotal = [];
         let clusterOverlays = [];
+        let heatmapLayer = null;
         let IncidentClusterOverlay; 
+
+        // Mapeo dinámico de colores por mes e inventario de colores diferenciadores
+        let mesColorMap = {};
+        const coloresDisponibles = [
+            '#19567C', '#D34872', '#4AB5E0', '#F59E0B', '#10B981', 
+            '#8B5CF6', '#F97316', '#06B6D4', '#EC4899', '#14B8A6'
+        ];
 
         // --- FUNCIÓN PARA EL TEMPORIZADOR DE INFOWINDOW ---
         function startInfoWindowTimer() {
@@ -340,12 +359,13 @@
             // DEFINIR CLASE PARA EL CLÚSTER Y PUNTO INDIVIDUAL
             // -----------------------------------------------------
             IncidentClusterOverlay = class extends google.maps.OverlayView {
-                constructor(position, count, address, mapInstance, fechas) {
+                constructor(position, count, address, mapInstance, fechas, color) {
                     super();
                     this.position = position;
                     this.count = count;
                     this.address = address;
                     this.fechas = fechas || []; 
+                    this.color = color || '#19567C'; // Color personalizado por parámetro
                     this.div = null;
                     this.setMap(mapInstance);
                 }
@@ -359,7 +379,7 @@
                         const iconAlert = '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="9" x2="12" y2="13" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>';
                         this.div.innerHTML = `
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="100%" height="100%" style="display:block;">
-                                <circle cx="16" cy="16" r="15" fill="#19567C" stroke="#FFFFFF" stroke-width="2"/>
+                                <circle cx="16" cy="16" r="15" fill="${this.color}" stroke="#FFFFFF" stroke-width="2"/>
                                 <g transform="translate(4, 4) scale(0.75)">
                                     ${iconAlert}
                                 </g>
@@ -368,6 +388,7 @@
                     } else {
                         // Para clusters (>1): con número y latido opcional.
                         this.div.className = 'incident-cluster';
+                        this.div.style.backgroundColor = this.color;
                         if (this.count > 5) this.div.classList.add('pulse-cluster');
                         this.div.innerHTML = this.count;
                     }
@@ -521,7 +542,6 @@
                 };
             }
 
-            // Esta función ahora también filtra dinámicamente según el Filtro Global (usando CGM estrictamente)
             function updatePointStyles() {
                 const zoom = map.getZoom();
                 let size = 10;   
@@ -531,7 +551,6 @@
                 const globalCgmSelect = document.getElementById('filtro-global-cgm');
                 const globalCgm = globalCgmSelect ? globalCgmSelect.value : "TODOS";
 
-                // Función auxiliar para aplicar estilo y visibilidad a capas de puntos
                 const applyStyleWithFilter = (layer, color, path) => {
                     layer.setStyle((feature) => {
                         const featCgm = feature.getProperty('CGM');
@@ -555,14 +574,12 @@
                 applyStyleWithFilter(reductoresLayer, '#D34872', pathReductor);
                 applyStyleWithFilter(solicitudesLayer, '#4AB5E0', pathSolicitud);
 
-                // Estilos estáticos para líneas de colectivos (usando la paleta institucional)
-                yitosLayer.setStyle(() => ({ strokeColor: '#D34872', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));         // Magenta
-                evgLayer.setStyle(() => ({ strokeColor: '#19567C', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));           // Azul Institucional
-                autobusesLayer.setStyle(() => ({ strokeColor: '#4AB5E0', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));     // Celeste
-                provincialesLayer.setStyle(() => ({ strokeColor: '#D34872', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));  // Magenta
-                nacionalesLayer.setStyle(() => ({ strokeColor: '#19567C', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));    // Azul
+                yitosLayer.setStyle(() => ({ strokeColor: '#D34872', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));         
+                evgLayer.setStyle(() => ({ strokeColor: '#19567C', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));           
+                autobusesLayer.setStyle(() => ({ strokeColor: '#4AB5E0', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));     
+                provincialesLayer.setStyle(() => ({ strokeColor: '#D34872', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));  
+                nacionalesLayer.setStyle(() => ({ strokeColor: '#19567C', strokeWeight: 3, strokeOpacity: 0.9, zIndex: 5 }));    
 
-                // Polígonos CGM: Se resaltan si se usa el filtro global
                 cgmLayer.setStyle((feature) => {
                     const featCgm = feature.getProperty('CGM');
                     let isVisible = true;
@@ -571,9 +588,9 @@
 
                     if (globalCgm !== "TODOS") {
                         if (!featCgm || featCgm.toUpperCase() !== globalCgm) {
-                            isVisible = false; // Oculta polígonos que no son el seleccionado
+                            isVisible = false; 
                         } else {
-                            opacidad = 0.4; // Resalta el polígono seleccionado
+                            opacidad = 0.4; 
                             grosor = 4;
                         }
                     }
@@ -592,7 +609,6 @@
 
             map.addListener('zoom_changed', updatePointStyles);
 
-            // Ventanas Emergentes base
             function bindPopup(layer, colorTitle, defaultTitle, isPolygon) {
                 layer.addListener('click', function(event) {
                     const name = event.feature.getProperty('Name') || defaultTitle;
@@ -612,16 +628,15 @@
                     content += `</div>`;
                     infoWindow.setContent(content);
                     
-                    // Asegurarnos de posicionarlo correctamente según el tipo de geometría (Punto, Línea, Polígono)
                     const geomType = event.feature.getGeometry().getType();
                     if (geomType === 'Point') {
                         infoWindow.setPosition(event.feature.getGeometry().get());
                     } else {
-                        infoWindow.setPosition(event.latLng); // Click position for LineStrings/Polygons
+                        infoWindow.setPosition(event.latLng); 
                     }
 
                     infoWindow.open(map);
-                    startInfoWindowTimer(); // Iniciar cuenta regresiva al abrir
+                    startInfoWindowTimer(); 
                 });
             }
 
@@ -630,7 +645,6 @@
             bindPopup(reductoresLayer, '#D34872', 'Reductor de Velocidad', false);
             bindPopup(solicitudesLayer, '#4AB5E0', 'Solicitud 2026', false);
             
-            // Popups de líneas de colectivos
             bindPopup(yitosLayer, '#D34872', 'Recorrido Empresa Yitos', false);
             bindPopup(evgLayer, '#19567C', 'Recorrido Empresa EVG', false);
             bindPopup(autobusesLayer, '#4AB5E0', 'Recorrido Empresa Autobuses', false);
@@ -640,7 +654,7 @@
             trafficLayer = new google.maps.TrafficLayer();
 
             // -----------------------------------------------------
-            // LÓGICA DE INCIDENTES CON FILTRO GLOBAL APLICADO
+            // LÓGICA DE INCIDENTES (PUNTOS DIFERENCIADOS / HEATMAP)
             // -----------------------------------------------------
 
             function getDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -661,17 +675,25 @@
 
             function procesarYMostrarIncidentes() {
                 limpiarClusters();
+                if (heatmapLayer) {
+                    heatmapLayer.setMap(null);
+                    heatmapLayer = null;
+                }
                 
                 if (!document.getElementById('cb-incidentes').checked) return;
 
-                const mesFiltro = document.getElementById('select-mes-ano').value;
+                // Capturar meses seleccionados desde los checkboxes
+                const checkboxes = document.querySelectorAll('.cb-mes-ano:checked');
+                let mesesSeleccionados = Array.from(checkboxes).map(cb => cb.value);
+                const esTodos = mesesSeleccionados.includes('TODOS') || mesesSeleccionados.length === 0;
+
                 const globalCgmSelect = document.getElementById('filtro-global-cgm');
                 const globalCgm = globalCgmSelect ? globalCgmSelect.value : "TODOS";
 
                 let dataFiltrada = incidentDataTotal;
                 
-                if (mesFiltro !== "TODOS") {
-                    dataFiltrada = dataFiltrada.filter(d => d['Mes/Año'] === mesFiltro);
+                if (!esTodos) {
+                    dataFiltrada = dataFiltrada.filter(d => mesesSeleccionados.includes(d['Mes/Año']));
                 }
 
                 if (globalCgm !== "TODOS") {
@@ -681,47 +703,85 @@
                     });
                 }
 
-                let clusters = [];
+                // Determinar el tipo de visualización activo (Puntos o Heatmap)
+                const tipoVisualizacion = document.querySelector('input[name="tipo-visualizacion"]:checked').value;
+                const esMultiMes = !esTodos && mesesSeleccionados.length > 1;
 
-                dataFiltrada.forEach(row => {
-                    const lat = parseFloat(row.Latitud);
-                    const lng = parseFloat(row.Longitud);
-                    if (isNaN(lat) || isNaN(lng)) return;
+                if (tipoVisualizacion === 'heatmap') {
+                    // Generar Mapa de Calor
+                    const heatmapData = dataFiltrada.map(row => {
+                        const lat = parseFloat(row.Latitud);
+                        const lng = parseFloat(row.Longitud);
+                        if (isNaN(lat) || isNaN(lng)) return null;
+                        return new google.maps.LatLng(lat, lng);
+                    }).filter(latLng => latLng !== null);
 
-                    let foundCluster = null;
-                    for (let c of clusters) {
-                        if (getDistanceMeters(lat, lng, c.lat, c.lng) <= 30) {
-                            foundCluster = c;
-                            break;
+                    heatmapLayer = new google.maps.visualization.HeatmapLayer({
+                        data: heatmapData,
+                        map: map,
+                        radius: 30,
+                        gradient: [
+                            'rgba(74, 181, 224, 0)',    // Transparente Celeste (--acento)
+                            'rgba(74, 181, 224, 0.6)',  // Celeste bajo
+                            'rgba(25, 86, 124, 0.8)',   // Azul Institucional (--bg-main)
+                            'rgba(211, 72, 114, 0.9)',  // Magenta (--magenta) por intensidad
+                            'rgba(211, 72, 114, 1.0)'   // Magenta puro crítico
+                        ]
+                    });
+
+                } else {
+                    // Generar Clústeres/Puntos individuales tradicionales
+                    let clusters = [];
+
+                    dataFiltrada.forEach(row => {
+                        const lat = parseFloat(row.Latitud);
+                        const lng = parseFloat(row.Longitud);
+                        if (isNaN(lat) || isNaN(lng)) return;
+
+                        let foundCluster = null;
+                        for (let c of clusters) {
+                            // Si hay multiselección activa, se separan los puntos por mes para reflejar su color independiente
+                            const mismoMes = !esMultiMes || c.mes === row['Mes/Año'];
+                            if (mismoMes && getDistanceMeters(lat, lng, c.lat, c.lng) <= 30) {
+                                foundCluster = c;
+                                break;
+                            }
                         }
-                    }
 
-                    const fecha = row.Fecha_Creacion_dt || 'Fecha desconocida';
+                        const fecha = row.Fecha_Creacion_dt || 'Fecha desconocida';
 
-                    if (foundCluster) {
-                        foundCluster.count++;
-                        foundCluster.fechas.push(fecha); 
-                    } else {
-                        clusters.push({
-                            lat: lat,
-                            lng: lng,
-                            count: 1,
-                            direccion: row.direccion_normalizada || row['Calle y Altura'] || 'Ubicación Desconocida',
-                            fechas: [fecha] 
-                        });
-                    }
-                });
+                        if (foundCluster) {
+                            foundCluster.count++;
+                            foundCluster.fechas.push(fecha); 
+                        } else {
+                            clusters.push({
+                                lat: lat,
+                                lng: lng,
+                                count: 1,
+                                direccion: row.direccion_normalizada || row['Calle y Altura'] || 'Ubicación Desconocida',
+                                fechas: [fecha],
+                                mes: row['Mes/Año']
+                            });
+                        }
+                    });
 
-                clusters.forEach(c => {
-                    const overlay = new IncidentClusterOverlay(
-                        new google.maps.LatLng(c.lat, c.lng), 
-                        c.count, 
-                        c.direccion, 
-                        map,
-                        c.fechas 
-                    );
-                    clusterOverlays.push(overlay);
-                });
+                    clusters.forEach(c => {
+                        let colorHex = '#19567C'; // Por defecto azul institucional
+                        if (esMultiMes && mesColorMap[c.mes]) {
+                            colorHex = mesColorMap[c.mes];
+                        }
+
+                        const overlay = new IncidentClusterOverlay(
+                            new google.maps.LatLng(c.lat, c.lng), 
+                            c.count, 
+                            c.direccion, 
+                            map,
+                            c.fechas,
+                            colorHex
+                        );
+                        clusterOverlays.push(overlay);
+                    });
+                }
             }
 
             fetch('./seguridad_vial.csv')
@@ -736,7 +796,6 @@
                             
                             const mesesSet = new Set();
                             
-                            // Adaptación al nuevo formato CSV
                             incidentDataTotal.forEach(r => {
                                 r['Latitud'] = r['Lat'];
                                 r['Longitud'] = r['Lon'];
@@ -759,15 +818,36 @@
                                 r['Fecha_Creacion_dt'] = (r['Fecha'] || '') + ' ' + (r['Hora'] || '');
                             });
                             
-                            const selectMesAno = document.getElementById('select-mes-ano');
-                            Array.from(mesesSet).sort().forEach(mes => {
-                                const option = document.createElement('option');
-                                option.value = mes;
-                                option.textContent = mes;
-                                selectMesAno.appendChild(option);
+                            const containerMesAno = document.getElementById('container-mes-ano');
+                            const mesesArray = Array.from(mesesSet).sort();
+
+                            // Asignación estática de la paleta diferenciadora a los meses indexados
+                            mesesArray.forEach((mes, idx) => {
+                                mesColorMap[mes] = coloresDisponibles[idx % coloresDisponibles.length];
                             });
 
-                            selectMesAno.addEventListener('change', procesarYMostrarIncidentes);
+                            // Construcción dinámica del checklist
+                            mesesArray.forEach(mes => {
+                                const lbl = document.createElement('label');
+                                lbl.className = 'flex items-center gap-2 cursor-pointer font-medium';
+                                lbl.innerHTML = `
+                                    <input type="checkbox" value="${mes}" class="cb-mes-ano w-3.5 h-3.5 accent-[#19567C]">
+                                    <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${mesColorMap[mes]};"></span>
+                                    <span>${mes}</span>
+                                `;
+                                containerMesAno.appendChild(lbl);
+                            });
+
+                            // Eventos cruzados para limpiar "Todos los meses" o desmarcar individuales según corresponda
+                            containerMesAno.addEventListener('change', (e) => {
+                                if (e.target.id === 'cb-mes-todos' && e.target.checked) {
+                                    document.querySelectorAll('.cb-mes-ano:not(#cb-mes-todos)').forEach(cb => cb.checked = false);
+                                } else if (e.target.classList.contains('cb-mes-ano') && e.target.id !== 'cb-mes-todos' && e.target.checked) {
+                                    const todosCb = document.getElementById('cb-mes-todos');
+                                    if (todosCb) todosCb.checked = false;
+                                }
+                                procesarYMostrarIncidentes();
+                            });
                         }
                     });
                 })
@@ -805,6 +885,11 @@
             });
 
             document.getElementById('cb-incidentes').addEventListener('change', procesarYMostrarIncidentes);
+
+            // Escuchar cambios en los selectores de visualización (Radio Buttons)
+            document.querySelectorAll('input[name="tipo-visualizacion"]').forEach(radio => {
+                radio.addEventListener('change', procesarYMostrarIncidentes);
+            });
         }
     </script>
 </body>
