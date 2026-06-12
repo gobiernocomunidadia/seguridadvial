@@ -146,10 +146,10 @@
                         
                         <div class="flex gap-4 mt-1 pl-7 text-xs font-bold text-gray-700">
                             <label class="flex items-center gap-1 cursor-pointer">
-                                <input type="radio" name="tipo-visualizacion" value="puntos" class="accent-[#19567C]"> Puntos
+                                <input type="radio" name="tipo-visualizacion" value="puntos" checked class="accent-[#19567C]"> Puntos
                             </label>
                             <label class="flex items-center gap-1 cursor-pointer">
-                                <input type="radio" name="tipo-visualizacion" value="heatmap" checked class="accent-[#19567C]"> Mapa de Calor
+                                <input type="radio" name="tipo-visualizacion" value="heatmap" class="accent-[#19567C]"> Mapa de Calor
                             </label>
                         </div>
 
@@ -245,8 +245,10 @@
         let incidentDataTotal = [];
         let clusterOverlays = [];
         
-        // DICCIONARIO GLOBAL DE CAPAS DE CALOR REUTILIZABLES
-        let heatmapsInstanciados = {}; 
+        // Variables limpias para el mapa de calor
+        let heatmapLayerGlobal = null; 
+        let heatmapsMulti = []; 
+        
         let IncidentClusterOverlay; 
 
         let mesColorMap = {};
@@ -274,11 +276,6 @@
             lucide.createIcons();
             infoWindow = new google.maps.InfoWindow();
             
-            // Verificación de seguridad de API
-            if (!google.maps.visualization) {
-                console.error("CRÍTICO: La librería 'visualization' de Google Maps no se cargó.");
-            }
-
             google.maps.event.addListener(infoWindow, 'domready', () => {
                 const iwContainer = document.querySelector('.gm-style-iw-c');
                 if (iwContainer) {
@@ -303,19 +300,6 @@
                 zoom: 13,
                 styles: mapStyle,
                 mapTypeControl: false, streetViewControl: false
-            });
-
-            // INSTANCIADOR GLOBALES DE HEATMAPS
-            // En vez de destruirlos, los creamos vacíos y luego inyectamos los datos
-            heatmapsInstanciados['GLOBAL'] = new google.maps.visualization.HeatmapLayer({
-                map: null,
-                radius: 35,
-                gradient: [
-                    "rgba(0, 0, 0, 0)",
-                    "rgba(74, 181, 224, 0.6)",
-                    "rgba(25, 86, 124, 0.9)",
-                    "rgba(211, 72, 114, 1)"
-                ]
             });
 
             IncidentClusterOverlay = class extends google.maps.OverlayView {
@@ -429,7 +413,7 @@
             map.addListener('zoom_changed', updatePointStyles);
 
             // -----------------------------------------------------
-            // LÓGICA DE INCIDENTES (ACTUALIZACIÓN POR DATA EN VEZ DE RECREACIÓN)
+            // LÓGICA DE INCIDENTES (SEGURA Y LAZY)
             // -----------------------------------------------------
             function getDistanceMeters(lat1, lon1, lat2, lon2) {
                 const R = 6371e3; const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180;
@@ -439,10 +423,13 @@
             }
 
             function limpiarVisualizaciones() {
-                // Elimina los puntos físicos
-                clusterOverlays.forEach(o => o.setMap(null)); clusterOverlays = [];
-                // Oculta todas las capas de heatmap activas
-                Object.values(heatmapsInstanciados).forEach(hm => hm.setMap(null));
+                // Limpiar puntos
+                clusterOverlays.forEach(o => o.setMap(null)); 
+                clusterOverlays = [];
+                // Limpiar heatmaps
+                if (heatmapLayerGlobal) { heatmapLayerGlobal.setMap(null); heatmapLayerGlobal = null; }
+                heatmapsMulti.forEach(hm => hm.setMap(null)); 
+                heatmapsMulti = [];
             }
 
             function getLatLngLimpios(row) {
@@ -472,34 +459,49 @@
                 const esMultiMes = !cbMeses.includes('TODOS') && cbMeses.length > 1;
 
                 if (tipoVista === 'heatmap') {
+                    // Validamos explícitamente que la librería de Google exista antes de llamarla
+                    if (!google.maps.visualization) {
+                        console.error("No se pudo cargar el mapa de calor porque la librería 'visualization' no respondió.");
+                        return;
+                    }
+
                     if (esMultiMes) {
                         cbMeses.forEach(mes => {
                             const rgb = hexToRgb(mesColorMap[mes] || '#19567C');
                             const puntosMes = data.filter(d => d['Mes/Año'] === mes).map(getLatLngLimpios).filter(p => p !== null);
                             
                             if (puntosMes.length > 0) {
-                                // Si no existe la capa de este mes, la creamos y la guardamos
-                                if (!heatmapsInstanciados[mes]) {
-                                    heatmapsInstanciados[mes] = new google.maps.visualization.HeatmapLayer({
-                                        map: null,
-                                        radius: 35,
-                                        gradient: [
-                                            `rgba(0, 0, 0, 0)`, 
-                                            `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`, 
-                                            `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`
-                                        ]
-                                    });
-                                }
-                                // Inyectamos los datos dinámicamente y la mostramos
-                                heatmapsInstanciados[mes].setData(new google.maps.MVCArray(puntosMes));
-                                heatmapsInstanciados[mes].setMap(map);
+                                const capa = new google.maps.visualization.HeatmapLayer({
+                                    data: puntosMes,
+                                    map: map,
+                                    radius: 40,
+                                    opacity: 1,
+                                    maxIntensity: 8,
+                                    gradient: [
+                                        'rgba(0, 0, 0, 0)', 
+                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`, 
+                                        `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`
+                                    ]
+                                });
+                                heatmapsMulti.push(capa);
                             }
                         });
                     } else {
                         const puntosTotal = data.map(getLatLngLimpios).filter(p => p !== null);
                         if (puntosTotal.length > 0) {
-                            heatmapsInstanciados['GLOBAL'].setData(new google.maps.MVCArray(puntosTotal));
-                            heatmapsInstanciados['GLOBAL'].setMap(map);
+                            heatmapLayerGlobal = new google.maps.visualization.HeatmapLayer({
+                                data: puntosTotal,
+                                map: map,
+                                radius: 40,
+                                opacity: 1,
+                                maxIntensity: 8,
+                                gradient: [
+                                    'rgba(0, 0, 0, 0)',         
+                                    'rgba(74, 181, 224, 1)',    
+                                    'rgba(25, 86, 124, 1)',     
+                                    'rgba(211, 72, 114, 1)'     
+                                ]
+                            });
                         }
                     }
 
