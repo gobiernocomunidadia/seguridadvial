@@ -92,7 +92,7 @@
                         </label>
                         <label class="flex items-center gap-3 cursor-pointer">
                             <input type="checkbox" id="cb-cgm" checked class="w-4 h-4 accent-[#19567C]">
-                            <span class="text-sm text-[#0F172A] font-bold">Líneas de los CGM</span>
+                            <span class="text-sm text-[#0F172A] font-bold">División por CGM</span>
                         </label>
                     </div>
                 </div>
@@ -104,7 +104,7 @@
                     <div class="space-y-3">
                         <label class="flex items-center gap-3 cursor-pointer">
                             <input type="checkbox" id="cb-incidentes" checked class="w-4 h-4 accent-[#19567C]">
-                            <span class="text-sm text-[#0F172A] font-bold">Habilitar Incidentes</span>
+                            <span class="text-sm text-[#0F172A] font-bold">Ver Incidentes</span>
                         </label>
                         
                         <div class="flex gap-4 mt-1 pl-7 text-xs font-bold text-gray-700">
@@ -167,6 +167,26 @@
                             <input type="checkbox" id="cb-reductores" class="w-4 h-4 accent-[#19567C]">
                             <span class="text-sm text-[#0F172A] font-bold">Reductores de Velocidad</span>
                         </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-solicitudes" class="w-4 h-4 accent-[#19567C]">
+                            <span class="text-sm text-[#0F172A] font-bold">Solicitudes Semáforos 2026</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bg-[#19567C]/10 p-3 rounded-lg border border-[#19567C]/30">
+                    <h4 class="text-xs font-extrabold text-[#19567C] uppercase mb-1 flex items-center gap-2">
+                        <i data-lucide="bus" class="h-4 w-4"></i> Colectivos
+                    </h4>
+                    <div class="space-y-3 mb-4">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-yitos" class="w-4 h-4 accent-[#19567C]">
+                            <span class="text-sm text-[#0F172A] font-bold">Empresa Yitos</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cb-evg" class="w-4 h-4 accent-[#19567C]">
+                            <span class="text-sm text-[#0F172A] font-bold">Empresa EVG</span>
+                        </label>
                     </div>
                 </div>
 
@@ -181,10 +201,9 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2MHti5Cy4IDKPc3Iu0ypNQg_BgsjcMoQ&libraries=visualization&callback=initMap" defer></script>
 
     <script>
-        let map, infoWindow; 
-        let cgmLayer, semaforosLayer, reductoresLayer; 
-        let limitePolygons = []; 
-        let limitePolylines = [];
+        let map, infoWindow, infoWindowTimer; 
+        let cgmLayer, semaforosLayer, reductoresLayer, solicitudesLayer, yitosLayer, evgLayer; 
+        let limiteElements = []; 
         
         let incidentDataTotal = [];
         let clusterOverlays = [];
@@ -194,15 +213,20 @@
         let mesColorMap = {};
         const coloresDisponibles = ['#19567C', '#D34872', '#4AB5E0', '#F59E0B', '#10B981', '#8B5CF6'];
 
+        function startInfoWindowTimer() {
+            if (infoWindowTimer) clearTimeout(infoWindowTimer);
+            infoWindowTimer = setTimeout(() => { if (infoWindow) infoWindow.close(); }, 10000); 
+        }
+
         window.closeInfoWindow = function() {
             if (infoWindow) infoWindow.close();
+            if (infoWindowTimer) clearTimeout(infoWindowTimer);
         };
 
         function initMap() {
             lucide.createIcons();
             infoWindow = new google.maps.InfoWindow();
 
-            // 1. Iniciar Mapa Base
             const mapStyle = [
                 { featureType: "poi", stylers: [{ visibility: "off" }] },
                 { featureType: "transit", stylers: [{ visibility: "off" }] },
@@ -219,7 +243,6 @@
                 mapTypeControl: false, streetViewControl: false
             });
 
-            // 2. Definición del Punto/Cluster para cuando el usuario elige "Puntos"
             IncidentClusterOverlay = class extends google.maps.OverlayView {
                 constructor(position, count, address, mapInstance, fechas, color) {
                     super();
@@ -241,12 +264,7 @@
                     }
                     this.div.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        const fechasList = this.fechas.map(f => `<li style="margin-bottom: 2px;">${f}</li>`).join('');
-                        const fechasHtml = `<div style="margin-top: 10px;"><p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 700; color: #19567C;">Fechas Registradas:</p><div class="custom-scrollbar" style="max-height: 80px; overflow-y: auto; background-color: #F3F6F9; border-radius: 4px; padding: 4px 8px; border: 1px solid #E6EDF3;"><ul style="margin: 0; padding-left: 12px; color: #475569; font-size: 11px;">${fechasList}</ul></div></div>`;
-                        const content = `<div style="font-family: 'Montserrat', sans-serif; min-width: 220px; position: relative;"><button onclick="window.closeInfoWindow()" class="custom-close-btn">&times;</button><h3 style="font-weight: 800; font-size: 14px; color: #19567C; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">Zona de Incidentes</h3><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Dirección:</b> ${this.address}</p><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Total:</b> ${this.count}</p>${fechasHtml}</div>`;
-                        infoWindow.setContent(content);
-                        infoWindow.setPosition(this.position);
-                        infoWindow.open(map);
+                        mostrarPopupIncidente(this.position, this.address, this.count, this.fechas);
                     });
                     const panes = this.getPanes();
                     panes.overlayMouseTarget.appendChild(this.div);
@@ -254,25 +272,39 @@
                 draw() {
                     if (!this.div) return;
                     const pos = this.getProjection().fromLatLngToDivPixel(this.position);
-                    let size = this.count === 1 ? 16 : 24;
-                    this.div.style.width = size + 'px'; this.div.style.height = size + 'px';
-                    this.div.style.left = (pos.x - size/2) + 'px'; this.div.style.top = (pos.y - size/2) + 'px';
+                    if (this.count === 1) {
+                        const zoom = this.getMap().getZoom();
+                        let size = zoom >= 15 ? 20 : (zoom >= 13 ? 14 : 10);
+                        this.div.style.width = size + 'px'; this.div.style.height = size + 'px';
+                        this.div.style.left = (pos.x - size/2) + 'px'; this.div.style.top = (pos.y - size/2) + 'px';
+                    } else {
+                        this.div.style.left = (pos.x - 12) + 'px'; this.div.style.top = (pos.y - 12) + 'px';
+                    }
                 }
                 onRemove() { if (this.div) { this.div.parentNode.removeChild(this.div); this.div = null; } }
             };
 
-            // 3. Cargar Límites y CGM
+            function mostrarPopupIncidente(position, address, count, fechas) {
+                const fechasList = fechas.map(f => `<li style="margin-bottom: 2px;">${f}</li>`).join('');
+                const fechasHtml = `<div style="margin-top: 10px;"><p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 700; color: #19567C;">Fechas Registradas:</p><div class="custom-scrollbar" style="max-height: 80px; overflow-y: auto; background-color: #F3F6F9; border-radius: 4px; padding: 4px 8px; border: 1px solid #E6EDF3;"><ul style="margin: 0; padding-left: 12px; color: #475569; font-size: 11px;">${fechasList}</ul></div></div>`;
+                const content = `<div style="font-family: 'Montserrat', sans-serif; min-width: 220px; position: relative;"><button onclick="window.closeInfoWindow()" class="custom-close-btn">&times;</button><h3 style="font-weight: 800; font-size: 14px; color: #19567C; border-bottom: 1px solid #E6EDF3; padding-bottom: 4px; margin-bottom: 8px;">Zona de Incidentes</h3><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Dirección:</b> ${address}</p><p style="margin: 4px 0; font-size: 12px; color: #333;"><b>Total:</b> ${count}</p>${fechasHtml}</div>`;
+                infoWindow.setContent(content);
+                infoWindow.setPosition(position);
+                infoWindow.open(map);
+            }
+
+            // CARGAS GEOGRÁFICAS
             fetch('./municipios_Lomas de Zamora.geojson').then(r => r.json()).then(geoJson => {
                 geoJson.features.forEach(feature => {
-                    const polys = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
-                    polys.forEach(poly => poly.forEach(ring => {
-                        const path = ring.map(coord => ({ lat: coord[1], lng: coord[0] }));
-                        // Guardamos el polígono y la línea por separado
-                        const p = new google.maps.Polygon({ paths: path, strokeOpacity: 0, fillColor: '#19567C', fillOpacity: 0.05, map: map });
-                        const l = new google.maps.Polyline({ path: path, strokeOpacity: 0, icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 }, offset: '0', repeat: '15px' }], strokeColor: '#19567C', strokeWeight: 3, map: map });
-                        limitePolygons.push(p);
-                        limitePolylines.push(l);
-                    }));
+                    if (feature.geometry.type === 'MultiPolygon' || feature.geometry.type === 'Polygon') {
+                        const polys = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
+                        polys.forEach(poly => poly.forEach(ring => {
+                            const path = ring.map(coord => ({ lat: coord[1], lng: coord[0] }));
+                            const p = new google.maps.Polygon({ paths: path, strokeOpacity: 0, fillColor: '#19567C', fillOpacity: 0.01, map: map, zIndex: 0 });
+                            const l = new google.maps.Polyline({ path: path, strokeOpacity: 0, icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 }, offset: '0', repeat: '15px' }], strokeColor: '#19567C', strokeWeight: 3, map: map, zIndex: 1 });
+                            limiteElements.push(p, l);
+                        }));
+                    }
                 });
             });
 
@@ -286,8 +318,8 @@
                     const opt = document.createElement('option'); opt.value = cgm; opt.textContent = cgm;
                     selectGlobalCgm.appendChild(opt);
                 });
-                selectGlobalCgm.addEventListener('change', () => { actualizarVisibilidadCapasBase(); procesarYMostrarIncidentes(); });
-                actualizarVisibilidadCapasBase(); 
+                selectGlobalCgm.addEventListener('change', () => { updatePointStyles(); procesarYMostrarIncidentes(); });
+                updatePointStyles(); 
             });
             cgmLayer.setMap(map);
 
@@ -302,39 +334,25 @@
             semaforosLayer.setStyle(() => ({ icon: getSvgIcon('#19567C', '<rect x="7" y="2" width="10" height="20" rx="3"/><circle cx="12" cy="7" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="17" r="1.5"/>') }));
             reductoresLayer.setStyle(() => ({ icon: getSvgIcon('#D34872', '<path d="m20.9 18.55-8-15.98a1 1 0 0 0-1.8 0l-8 15.98"/><path d="M4.34 10a11.24 11.24 0 0 1 15.32 0"/><path d="M8.64 14.5a5.42 5.42 0 0 1 6.72 0"/><path d="M2 22h20"/>') }));
 
-            // 4. FUNCIÓN CLAVE: Ocultar fondos al usar el Heatmap
-            function actualizarVisibilidadCapasBase() {
+            function updatePointStyles() {
                 const sel = document.getElementById('filtro-global-cgm').value;
-                const tipoVista = document.querySelector('input[name="tipo-visualizacion"]:checked').value;
-                
-                // Si estamos en Mapa de Calor, apagamos TODOS los rellenos celestes para no tapar el color.
-                const opacidadFondo = (tipoVista === 'heatmap') ? 0.0 : (sel !== "TODOS" ? 0.3 : 0.05);
-
                 cgmLayer.setStyle(f => {
                     const cgm = (f.getProperty('CGM')||"").toUpperCase();
-                    const visible = sel==="TODOS" || cgm === sel;
-                    return { 
-                        fillColor: '#4AB5E0', 
-                        fillOpacity: opacidadFondo, // APAGADO EN HEATMAP
-                        strokeColor: '#19567C', 
-                        strokeWeight: 2, 
-                        visible: visible 
-                    };
+                    return { fillColor: '#4AB5E0', fillOpacity: sel!=="TODOS"?0.2:0.02, strokeColor: '#19567C', strokeWeight: sel!=="TODOS"?4:2, visible: sel==="TODOS" || cgm === sel, zIndex: 0 };
                 });
-
-                limitePolygons.forEach(p => p.setOptions({ fillOpacity: opacidadFondo }));
             }
 
-            // 5. Lógica de Renderizado (El Heatmap Crudo de Google)
-            function procesarYMostrarIncidentes() {
-                // Actualizamos capas base por si cambió la vista
-                actualizarVisibilidadCapasBase();
-
-                // Limpiar todo lo anterior
+            // -----------------------------------------------------
+            // EL MOTOR DE HEATMAP MÁS BÁSICO Y CRUDO POSIBLE
+            // -----------------------------------------------------
+            function limpiarVisualizaciones() {
                 clusterOverlays.forEach(o => o.setMap(null)); 
                 clusterOverlays = [];
                 if (heatmapLayer) { heatmapLayer.setMap(null); heatmapLayer = null; }
+            }
 
+            function procesarYMostrarIncidentes() {
+                limpiarVisualizaciones();
                 if (!document.getElementById('cb-incidentes').checked) return;
 
                 const cbMeses = Array.from(document.querySelectorAll('.cb-mes-ano:checked')).map(cb => cb.value);
@@ -351,7 +369,15 @@
                 const tipoVista = document.querySelector('input[name="tipo-visualizacion"]:checked').value;
 
                 if (tipoVista === 'heatmap') {
-                    // MAPA DE CALOR PURO Y DURO
+                    
+                    console.log("🔥 INICIANDO MAPA DE CALOR CRUDO 🔥");
+                    
+                    // Verificamos explícitamente si la librería cargó
+                    if (!google.maps.visualization) {
+                        alert("ERROR CRÍTICO: La librería de Heatmap de Google Maps no se cargó correctamente. Revisa tu conexión a internet o los permisos de tu API Key.");
+                        return;
+                    }
+
                     let heatmapData = [];
                     data.forEach(r => {
                         let latStr = (r.Latitud||'').toString().replace(',', '.');
@@ -364,22 +390,26 @@
                         }
                     });
 
-                    if (heatmapData.length > 0) {
+                    console.log("Puntos a dibujar en el mapa de calor: ", heatmapData.length);
+                    if(heatmapData.length > 0) {
+                        console.log("Coordenada de prueba: ", heatmapData[0].lat(), heatmapData[0].lng());
+                    }
+
+                    try {
+                        // CREACIÓN TOTALMENTE POR DEFECTO
+                        // Sin custom radius, sin maxIntensity, sin colores personalizados.
                         heatmapLayer = new google.maps.visualization.HeatmapLayer({
                             data: heatmapData,
-                            map: map,
-                            radius: 35, // Radio difuminado
-                            gradient: [ // Gradiente institucional con alpha correcto
-                                'rgba(255, 255, 255, 0)',
-                                'rgba(74, 181, 224, 0.6)', // Celeste
-                                'rgba(25, 86, 124, 0.9)',  // Azul
-                                'rgba(211, 72, 114, 1)'    // Magenta
-                            ]
+                            map: map
                         });
+                        console.log("✅ Capa de calor inyectada al mapa sin errores de JS.");
+                    } catch(e) {
+                        console.error("❌ Falló la creación del Heatmap: ", e);
+                        alert("Falló la creación del Heatmap: " + e.message);
                     }
 
                 } else {
-                    // PUNTOS CLÁSICOS
+                    // MODO PUNTOS CLÁSICO
                     let clusters = [];
                     const esMultiMes = !cbMeses.includes('TODOS') && cbMeses.length > 1;
 
@@ -391,8 +421,8 @@
                     }
 
                     data.forEach(row => {
-                        let lat = parseFloat((row.Latitud||'').toString().replace(',', '.'));
-                        let lng = parseFloat((row.Longitud||'').toString().replace(',', '.'));
+                        let lat = parseFloat((row.Latitud||'').toString().replace(',', '.');
+                        let lng = parseFloat((row.Longitud||'').toString().replace(',', '.');
                         if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
                         
                         let found = clusters.find(c => (!esMultiMes || c.mes === row['Mes/Año']) && getDist(lat, lng, c.lat, c.lng) <= 30);
@@ -410,7 +440,7 @@
                 }
             }
 
-            // 6. Carga de Datos
+            // CARGA DE DATOS
             fetch('./seguridad_vial.csv')
                 .then(r => r.text())
                 .then(csvText => {
@@ -467,13 +497,11 @@
                     });
                 });
 
-            // Listeners
             document.querySelectorAll('input[name="tipo-visualizacion"]').forEach(r => r.addEventListener('change', procesarYMostrarIncidentes));
             document.getElementById('cb-incidentes').addEventListener('change', procesarYMostrarIncidentes);
             
             document.getElementById('cb-limite').addEventListener('change', e => {
                 limitePolygons.forEach(p => p.setMap(e.target.checked ? map : null));
-                limitePolylines.forEach(l => l.setMap(e.target.checked ? map : null));
             });
 
             const toggleLayer = (id, layer) => document.getElementById(id).addEventListener('change', e => e.target.checked ? layer.setMap(map) : layer.setMap(null));
